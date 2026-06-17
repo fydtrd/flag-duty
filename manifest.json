@@ -1,0 +1,17 @@
+{
+  "name": "仪仗队升降旗排班",
+  "short_name": "升降旗排班",
+  "description": "仪仗队升降旗自动排班系统",
+  "start_url": "flag-duty-system.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1a1a2e",
+  "theme_color": "#1a1a2e",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%231a1a2e' width='100' height='100' rx='20'/><text y='.9em' font-size='70' text-anchor='middle' x='50'>🚩</text></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
