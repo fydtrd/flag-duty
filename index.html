@@ -133,8 +133,8 @@ let countsExLia={};
     if(fresh.length){members=stored.concat(fresh);S('members',members);}
   }
 })();
-// Normalize: members without cohort → 25级
-members.forEach(m=>{if(!m.cohort)m.cohort='25级';});
+// Normalize: members without cohort → 25级, without height → ''
+members.forEach(m=>{if(!m.cohort)m.cohort='25级';if(m.height===undefined)m.height='';});
 S('members',members);
 function recoCounts(){
   counts={};
