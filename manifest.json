@@ -2,7 +2,7 @@
   "name": "仪仗队升降旗排班",
   "short_name": "升降旗排班",
   "description": "仪仗队升降旗自动排班系统",
-  "start_url": "index.html",
+  "start_url": "mobile.html",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#1a1a2e",
