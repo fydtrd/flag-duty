@@ -263,11 +263,13 @@ function assign(roles,pool,run,quotas){
   }
   var qkeys=[['24级男','24级','男'],['24级女','24级','女'],['25级男','25级','男'],['25级女','25级','女']];
   var hasQuota=function(){for(var i=0;i<qkeys.length;i++){if((quotas[qkeys[i][0]]||0)>0)return true;}return false;}();
+  var isSpecial=function(name){return name.includes('旗手')||name.includes('指挥')||name.includes('跟旗');};
   for(let ri=0;ri<roles.length;ri++){
     const rname=roles[ri].name;
     const eligible=eligiblePool(rname);
     res[ri]=[];
-    if(!hasQuota){
+    // Special roles (旗手/指挥/跟旗): pick freely, quotas don't apply
+    if(isSpecial(rname)||!hasQuota){
       for(const id of eligible){
         if(res[ri].length>=roles[ri].count)break;
         if(used.has(id))continue;
