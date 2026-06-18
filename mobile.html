@@ -221,6 +221,7 @@ function dayTypes(sd){
 }
 
 // ── 分配角色 ──
+let weekSpecial={}; // week-level dedup for flag bearer/commander/liaison
 function assign(roles,pool,run,quotas){
   quotas=quotas||{};
   const res=roles.map(()=>[]);
@@ -230,10 +231,18 @@ function assign(roles,pool,run,quotas){
     if(roleName.includes('旗手'))p=p.filter(id=>{const m=gm(id);return m&&(m.tags||[]).includes('旗手')});
     if(roleName.includes('指挥'))p=p.filter(id=>{const m=gm(id);return m&&(m.tags||[]).includes('指挥')});
     if(roleName.includes('跟旗'))p=p.filter(id=>{const m=gm(id);return m&&(m.tags||[]).includes('联勤')});
+    // Prefer people not yet used in this special role this week
     const cnt=id=>roleName.includes('跟旗')?(counts[id]||0):(countsExLia[id]||0);
+    const isSpecial=roleName.includes('旗手')||roleName.includes('指挥')||roleName.includes('跟旗');
     const sorted=[...p].sort((a,b)=>{
       const ca=cnt(a),cb=cnt(b);
       const pa=ca<3?0:1,pb=cb<3?0:1;
+      // For special roles, prioritize people not yet used in that role this week
+      if(isSpecial){
+        const wa=weekSpecial[roleName]&&weekSpecial[roleName].has(a)?1:0;
+        const wb=weekSpecial[roleName]&&weekSpecial[roleName].has(b)?1:0;
+        return wa-wb||pa-pb||ca-cb;
+      }
       return pa-pb||ca-cb;
     });
     const buckets=[];
@@ -304,6 +313,14 @@ function assign(roles,pool,run,quotas){
       const hts=res[ri].map(id=>({id,h:hnum(id)}));
       hts.sort((a,b)=>a.h-b.h);
       res[ri]=[hts[0].id, hts[2].id, hts[1].id];
+    }
+  }
+  // Track special roles used this week for cross-day dedup
+  for(let ri=0;ri<roles.length;ri++){
+    const rname=roles[ri].name;
+    if(rname.includes('旗手')||rname.includes('指挥')||rname.includes('跟旗')){
+      if(!weekSpecial[rname])weekSpecial[rname]=new Set();
+      res[ri].forEach(id=>weekSpecial[rname].add(id));
     }
   }
   return res;
