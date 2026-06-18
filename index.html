@@ -229,9 +229,7 @@ function assign(roles,pool,run){
     if(roleName.includes('旗手'))p=p.filter(id=>{const m=gm(id);return m&&(m.tags||[]).includes('旗手')});
     if(roleName.includes('指挥'))p=p.filter(id=>{const m=gm(id);return m&&(m.tags||[]).includes('指挥')});
     if(roleName.includes('跟旗'))p=p.filter(id=>{const m=gm(id);return m&&(m.tags||[]).includes('联勤')});
-    // Use non-跟旗 count for flag-bearer/commander/regular roles, full count for 跟旗
     const cnt=id=>roleName.includes('跟旗')?(counts[id]||0):(countsExLia[id]||0);
-    // Sort by count ascending, but randomize within the same count bucket
     const sorted=[...p].sort((a,b)=>cnt(a)-cnt(b));
     const buckets=[];
     let prev=null,cur=[];
@@ -244,14 +242,40 @@ function assign(roles,pool,run){
     if(cur.length)buckets.push(cur);
     return buckets.map(b=>b.sort(()=>Math.random()-.5)).flat();
   }
-  for(let ri=0;ri<roles.length;ri++){
-    const eligible=eligiblePool(roles[ri].name);
+  function pick(eligible,target,opts={}){
+    const res=[];
+    const {femaleOnly=false,maleOnly=false}=opts;
     for(const id of eligible){
-      if(res[ri].length>=roles[ri].count)break;
+      if(res.length>=target)break;
       if(used.has(id))continue;
       if((run[id]||0)>=config.maxPerWeek)continue;
-      res[ri].push(id);
-      used.add(id);
+      const m=gm(id);
+      if(femaleOnly&&(!m||m.gender!=='女'))continue;
+      if(maleOnly&&m&&m.gender==='女')continue;
+      res.push(id);used.add(id);
+    }
+    return res;
+  }
+  // Female quotas: 大升旗队员8女, 升旗/降旗队员各2女
+  const femaleQuota=roleName=>{
+    if(roleName==='大升旗队员')return 8;
+    if(roleName==='升旗队员'||roleName==='降旗队员')return 2;
+    return 0;
+  };
+  for(let ri=0;ri<roles.length;ri++){
+    const rname=roles[ri].name;
+    const eligible=eligiblePool(rname);
+    const fq=femaleQuota(rname);
+    if(fq>0){
+      const females=pick(eligible,fq,{femaleOnly:true});
+      res[ri]=females;
+      const remaining=roles[ri].count-females.length;
+      if(remaining>0){
+        const others=pick(eligible,remaining,{maleOnly:false});
+        res[ri]=res[ri].concat(others);
+      }
+    }else{
+      res[ri]=pick(eligible,roles[ri].count);
     }
   }
   res.flat().forEach(id=>{run[id]=(run[id]||0)+1});
