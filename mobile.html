@@ -221,16 +221,21 @@ function dayTypes(sd){
 }
 
 // ── 分配角色 ──
-function assign(roles,pool,run){
+function assign(roles,pool,run,quotas){
+  quotas=quotas||{};
   const res=roles.map(()=>[]);
   const used=new Set();
   function eligiblePool(roleName){
     let p=pool.filter(id=>!used.has(id)&&(run[id]||0)<config.maxPerWeek);
-    if(roleName.includes('旗手'))p=p.filter(id=>{const m=gm(id);return m&&(m.tags||[]).includes('旗手')});
-    if(roleName.includes('指挥'))p=p.filter(id=>{const m=gm(id);return m&&(m.tags||[]).includes('指挥')});
-    if(roleName.includes('跟旗'))p=p.filter(id=>{const m=gm(id);return m&&(m.tags||[]).includes('联勤')});
-    const cnt=id=>roleName.includes('跟旗')?(counts[id]||0):(countsExLia[id]||0);
-    const sorted=[...p].sort((a,b)=>cnt(a)-cnt(b));
+    if(roleName.includes(旗手))p=p.filter(id=>{const m=gm(id);return m&&(m.tags||[]).includes(旗手)});
+    if(roleName.includes(指挥))p=p.filter(id=>{const m=gm(id);return m&&(m.tags||[]).includes(指挥)});
+    if(roleName.includes(跟旗))p=p.filter(id=>{const m=gm(id);return m&&(m.tags||[]).includes(联勤)});
+    const cnt=id=>roleName.includes(跟旗)?(counts[id]||0):(countsExLia[id]||0);
+    const sorted=[...p].sort((a,b)=>{
+      const ca=cnt(a),cb=cnt(b);
+      const pa=ca<3?0:1,pb=cb<3?0:1;
+      return pa-pb||ca-cb;
+    });
     const buckets=[];
     let prev=null,cur=[];
     for(const id of sorted){
@@ -244,45 +249,66 @@ function assign(roles,pool,run){
   }
   function pick(eligible,target,opts={}){
     const res=[];
-    const {femaleOnly=false,maleOnly=false}=opts;
+    const {cohort,gender}=opts;
     for(const id of eligible){
       if(res.length>=target)break;
       if(used.has(id))continue;
       if((run[id]||0)>=config.maxPerWeek)continue;
       const m=gm(id);
-      if(femaleOnly&&(!m||m.gender!=='女'))continue;
-      if(maleOnly&&m&&m.gender==='女')continue;
+      if(cohort&&m&&(m.cohort||'')!==cohort)continue;
+      if(gender&&m&&m.gender!==gender)continue;
       res.push(id);used.add(id);
     }
     return res;
   }
-  const femaleQuota=roleName=>{
-    if(roleName==='大升旗队员')return 8;
-    if(roleName==='升旗队员'||roleName==='降旗队员')return 2;
-    return 0;
-  };
+  var qkeys=[['24级男','24级','男'],['24级女','24级','女'],['25级男','25级','男'],['25级女','25级','女']];
+  var hasQuota=function(){for(var i=0;i<qkeys.length;i++){if((quotas[qkeys[i][0]]||0)>0)return true;}return false;}();
   for(let ri=0;ri<roles.length;ri++){
     const rname=roles[ri].name;
     const eligible=eligiblePool(rname);
-    const fq=femaleQuota(rname);
-    if(fq>0){
-      const females=pick(eligible,fq,{femaleOnly:true});
-      res[ri]=females;
-      const remaining=roles[ri].count-females.length;
-      if(remaining>0){
-        const others=pick(eligible,remaining,{maleOnly:false});
-        res[ri]=res[ri].concat(others);
+    res[ri]=[];
+    if(!hasQuota){
+      for(const id of eligible){
+        if(res[ri].length>=roles[ri].count)break;
+        if(used.has(id))continue;
+        if((run[id]||0)>=config.maxPerWeek)continue;
+        res[ri].push(id);used.add(id);
       }
     }else{
-      res[ri]=pick(eligible,roles[ri].count);
+      var picked=0;
+      for(var qi=0;qi<qkeys.length;qi++){
+        var qk=qkeys[qi][0], qc=qkeys[qi][1], qg=qkeys[qi][2];
+        var need=quotas[qk]||0;
+        if(need<=0)continue;
+        var sel=pick(eligible,need,{cohort:qc,gender:qg});
+        for(var si=0;si<sel.length;si++){res[ri].push(sel[si]);picked++;}
+      }
+      var remain=roles[ri].count-picked;
+      if(remain>0){
+        for(var ei=0;ei<eligible.length;ei++){
+          if(res[ri].length>=roles[ri].count)break;
+          var id=eligible[ei];
+          if(used.has(id))continue;
+          if((run[id]||0)>=config.maxPerWeek)continue;
+          res[ri].push(id);used.add(id);
+        }
+      }
     }
   }
   res.flat().forEach(id=>{run[id]=(run[id]||0)+1});
+  function hnum(id){const m=gm(id);return m&&m.height?parseFloat(m.height)||0:0}
+  for(let ri=0;ri<roles.length;ri++){
+    if(roles[ri].name.includes(旗手)&&res[ri].length===3){
+      const hts=res[ri].map(id=>({id,h:hnum(id)}));
+      hts.sort((a,b)=>a.h-b.h);
+      res[ri]=[hts[0].id, hts[2].id, hts[1].id];
+    }
+  }
   return res;
 }
-
 // ── 生成一周 ──
-function genWeek(mondayStr){
+function genWeek(mondayStr,quotas){
+  quotas=quotas||{};
   const result=[];
   const run={};
   const start=new Date(mondayStr);
@@ -296,13 +322,13 @@ function genWeek(mondayStr){
     const dtp=dayTypes(sd);
     const entry={date:ds,sd,gr:[],ra:[],lo:[]};
     const active=members.filter(m=>m.status==='active').map(m=>m.id);
-    if(dtp.gr)entry.gr=assign(config.grandRaise.roles,active,run);
-    if(dtp.ra)entry.ra=assign(config.raise.roles,active,run);
+    if(dtp.gr)entry.gr=assign(config.grandRaise.roles,active,run,quotas.gr||{});
+    if(dtp.ra)entry.ra=assign(config.raise.roles,active,run,quotas.ra||{});
     if(dtp.lo){
       const lp=lowerPeriods();
       const elig=active.filter(id=>!hasClass(gm(id),sd,lp));
       const excl=[...(entry.gr||[]).flat(),...(entry.ra||[]).flat()];
-      entry.lo=assign(config.lower.roles,elig.filter(id=>!excl.includes(id)),run);
+      entry.lo=assign(config.lower.roles,elig.filter(id=>!excl.includes(id)),run,quotas.lo||{});
       excl.forEach(id=>{run[id]=(run[id]||0)-1});
     }
     result.push(entry);
@@ -492,6 +518,22 @@ function saveConfig(){
 // ═══════════════════════════════════════
 // 排班表
 // ═══════════════════════════════════════
+function renderQuotaUI(){
+  const keys=['24级男','24级女','25级男','25级女'];
+  const short=['24男','24女','25男','25女'];
+  function row(type,label){
+    return '<div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;flex-wrap:wrap">'+
+      '<span style="font-weight:bold;font-size:12px;min-width:50px">'+label+'</span>'+
+      keys.map((k,i)=>'<span style="font-size:11px;display:flex;align-items:center;gap:2px">'+short[i]+'<input type="number" id="q-'+type+'-'+i+'" value="" min="0" max="99" style="width:52px;padding:4px 6px;font-size:11px" placeholder="0"></span>').join('')+
+    '</div>';
+  }
+  return '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">'+
+    '<span style="font-weight:bold;font-size:12px;color:var(--muted)">人员配置要求(留空=不限)</span>'+
+    row('gr','大升旗')+
+    row('ra','升旗')+
+    row('lo','降旗')+
+  '</div>';
+}
 function pageSchedule(){
   const now=new Date();
   const mon=new Date(now);mon.setDate(now.getDate()-(now.getDay()+6)%7);
@@ -507,6 +549,7 @@ function pageSchedule(){
           <button class="btn btn-b" onclick="window.print()">&#128424; 打印</button>
         </div>
       </div>
+      ${renderQuotaUI()}
     </div>
     ${renderLowerBlocked()}
     <div id="sched-view">${renderSched()}</div>`;
@@ -534,6 +577,12 @@ function doSchedule(){
   const weeks=parseInt(document.getElementById('sched-weeks').value);
   if(!start)return toast('请选择日期','toast-err');
   if(!members.some(m=>m.status==='active'))return toast('没有在岗队员','toast-err');
+  // Read quotas from UI
+  var q=function(type,i){var v=parseInt(document.getElementById('q-'+type+'-'+i).value);return v||0;};
+  var quotas={};
+  ['gr','ra','lo'].forEach(function(t){
+    quotas[t]={'24级男':q(t,0),'24级女':q(t,1),'25级男':q(t,2),'25级女':q(t,3)};
+  });
   for(let w=0;w<weeks;w++){
     // Remove old auto-generated entries for this week first
     const ws=new Date(start);ws.setDate(ws.getDate()+w*7);
@@ -544,7 +593,7 @@ function doSchedule(){
       const ei=schedule.findIndex(x=>x.date===ds);
       if(ei>=0&&!schedule[ei].locked)schedule.splice(ei,1);
     }
-    const entries=genWeek(wMonday);
+    const entries=genWeek(wMonday,quotas);
     for(const e of entries){
       const ei=schedule.findIndex(x=>x.date===e.date);
       if(ei>=0&&!schedule[ei].locked)schedule[ei]=e;
