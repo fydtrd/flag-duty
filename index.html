@@ -348,7 +348,6 @@ function genWeek(mondayStr,quotas){
       const elig=active.filter(id=>!hasClass(gm(id),sd,lp));
       const excl=[...(entry.gr||[]).flat(),...(entry.ra||[]).flat()];
       entry.lo=assign(config.lower.roles,elig.filter(id=>!excl.includes(id)),run,quotas.lo||{});
-      excl.forEach(id=>{run[id]=(run[id]||0)-1});
     }
     result.push(entry);
   }
