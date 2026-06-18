@@ -134,8 +134,19 @@ let countsExLia={};
   }
 })();
 // Normalize: members without cohort → 25级, without height → ''
-members.forEach(m=>{if(!m.cohort)m.cohort='25级';if(m.height===undefined)m.height='';});
-S('members',members);
+// Also sync heights from default data for existing members
+(()=>{
+  const defs=L('members_default',[]);
+  if(!defs.length)return;
+  const hmap={};defs.forEach(m=>{if(m.height)hmap[m.id]=m.height;});
+  let dirty=false;
+  members.forEach(m=>{
+    if(!m.cohort){m.cohort='25级';dirty=true;}
+    if(m.height===undefined&&hmap[m.id]){m.height=hmap[m.id];dirty=true;}
+    if(m.height===undefined){m.height='';dirty=true;}
+  });
+  if(dirty)S('members',members);
+})();
 function recoCounts(){
   counts={};
   countsExLia={};
