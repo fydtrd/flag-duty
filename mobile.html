@@ -227,13 +227,14 @@ function assign(roles,pool,run,quotas){
   const res=roles.map(()=>[]);
   const used=new Set();
   function eligiblePool(roleName){
-    let p=pool.filter(id=>!used.has(id)&&(run[id]||0)<config.maxPerWeek);
+    const isSpecial=roleName.includes('旗手')||roleName.includes('指挥')||roleName.includes('跟旗');
+    // For special roles, allow run[id]==3 if necessary to guarantee daily coverage
+    let p=pool.filter(id=>!used.has(id)&&(run[id]||0)<(isSpecial?config.maxPerWeek+1:config.maxPerWeek));
     if(roleName.includes('旗手'))p=p.filter(id=>{const m=gm(id);return m&&(m.tags||[]).includes('旗手')});
     if(roleName.includes('指挥'))p=p.filter(id=>{const m=gm(id);return m&&(m.tags||[]).includes('指挥')});
     if(roleName.includes('跟旗'))p=p.filter(id=>{const m=gm(id);return m&&(m.tags||[]).includes('联勤')});
     // Prefer people not yet used in this special role this week
     const cnt=id=>roleName.includes('跟旗')?(counts[id]||0):(countsExLia[id]||0);
-    const isSpecial=roleName.includes('旗手')||roleName.includes('指挥')||roleName.includes('跟旗');
     const sorted=[...p].sort((a,b)=>{
       const ca=cnt(a),cb=cnt(b);
       const pa=ca<3?0:1,pb=cb<3?0:1;
