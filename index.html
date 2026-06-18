@@ -227,10 +227,10 @@ function assign(roles,pool,run,quotas){
   const used=new Set();
   function eligiblePool(roleName){
     let p=pool.filter(id=>!used.has(id)&&(run[id]||0)<config.maxPerWeek);
-    if(roleName.includes(旗手))p=p.filter(id=>{const m=gm(id);return m&&(m.tags||[]).includes(旗手)});
-    if(roleName.includes(指挥))p=p.filter(id=>{const m=gm(id);return m&&(m.tags||[]).includes(指挥)});
-    if(roleName.includes(跟旗))p=p.filter(id=>{const m=gm(id);return m&&(m.tags||[]).includes(联勤)});
-    const cnt=id=>roleName.includes(跟旗)?(counts[id]||0):(countsExLia[id]||0);
+    if(roleName.includes('旗手'))p=p.filter(id=>{const m=gm(id);return m&&(m.tags||[]).includes('旗手')});
+    if(roleName.includes('指挥'))p=p.filter(id=>{const m=gm(id);return m&&(m.tags||[]).includes('指挥')});
+    if(roleName.includes('跟旗'))p=p.filter(id=>{const m=gm(id);return m&&(m.tags||[]).includes('联勤')});
+    const cnt=id=>roleName.includes('跟旗')?(counts[id]||0):(countsExLia[id]||0);
     const sorted=[...p].sort((a,b)=>{
       const ca=cnt(a),cb=cnt(b);
       const pa=ca<3?0:1,pb=cb<3?0:1;
@@ -298,7 +298,7 @@ function assign(roles,pool,run,quotas){
   res.flat().forEach(id=>{run[id]=(run[id]||0)+1});
   function hnum(id){const m=gm(id);return m&&m.height?parseFloat(m.height)||0:0}
   for(let ri=0;ri<roles.length;ri++){
-    if(roles[ri].name.includes(旗手)&&res[ri].length===3){
+    if(roles[ri].name.includes('旗手')&&res[ri].length===3){
       const hts=res[ri].map(id=>({id,h:hnum(id)}));
       hts.sort((a,b)=>a.h-b.h);
       res[ri]=[hts[0].id, hts[2].id, hts[1].id];
