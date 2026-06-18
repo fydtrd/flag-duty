@@ -7,22 +7,24 @@
 <link rel="manifest" href="manifest.json">
 <title>仪仗队升降旗自动排班系统 · 电脑端</title>
 <style>
-:root{--bg:#f0f2f5;--card:#fff;--primary:#c0392b;--primary-light:#e74c3c;--navy:#1a1a2e;--border:#e0e0e0;--text:#333;--muted:#888}
+:root{--bg:#f0f2f5;--card:#fff;--primary:#8B0000;--primary-light:#B22222;--navy:#0d1b2a;--border:#e0e0e0;--text:#333;--muted:#888}
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Microsoft YaHei','PingFang SC',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
-nav{width:260px;background:linear-gradient(180deg,var(--navy),#16213e);color:#fff;padding:32px 0;flex-shrink:0;display:flex;flex-direction:column;box-shadow:2px 0 12px rgba(0,0,0,.1)}
-nav h1{text-align:center;font-size:20px;padding:0 24px 28px;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:16px;letter-spacing:2px}
-nav a{display:block;padding:16px 32px;font-size:16px;color:rgba(255,255,255,.65);cursor:pointer;border-left:4px solid transparent;transition:.2s;text-decoration:none}
+nav{width:260px;background:linear-gradient(180deg,var(--navy),#0a1628);color:#fff;padding:28px 0;flex-shrink:0;display:flex;flex-direction:column;box-shadow:3px 0 24px rgba(0,0,0,.25)}
+nav h1{text-align:center;font-size:20px;padding:0 24px 28px;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:16px;letter-spacing:3px}
+nav .emblem{text-align:center;padding:20px 24px 16px}
+nav .emblem img{width:80px;height:80px;border-radius:50%;border:3px solid rgba(255,255,255,.15);object-fit:cover;background:rgba(255,255,255,.05)}
+nav a{display:block;padding:14px 32px;font-size:15px;color:rgba(255,255,255,.65);cursor:pointer;border-left:4px solid transparent;transition:.2s;text-decoration:none}
 nav a:hover{background:rgba(255,255,255,.06);color:#fff}
 nav a.sel{background:rgba(255,255,255,.1);border-left-color:var(--primary-light);color:var(--primary-light);font-weight:bold}
 nav .foot{padding:24px;font-size:13px;color:rgba(255,255,255,.45);text-align:center;margin-top:auto}
 main{flex:1;padding:40px 48px;overflow-y:auto;max-height:100vh}
 h2{font-size:26px;margin-bottom:28px;color:var(--navy);font-weight:800}
-.card{background:var(--card);border-radius:14px;padding:28px;margin-bottom:24px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.card{background:var(--card);border-radius:14px;padding:28px;margin-bottom:24px;box-shadow:0 2px 16px rgba(0,0,0,.08)}
 .card h3{font-size:16px;margin-bottom:18px;color:var(--navy);display:flex;align-items:center;gap:10px;font-weight:700}
 table{width:100%;border-collapse:collapse;font-size:14px}
 th,td{padding:10px 14px;text-align:center;border:1px solid var(--border);vertical-align:middle}
-th{background:#f5f6f8;font-weight:bold;color:#555;font-size:13px;white-space:nowrap;letter-spacing:.5px}
+th{background:#f0f1f3;font-weight:bold;color:#555;font-size:13px;white-space:nowrap;letter-spacing:.5px}
 tr:hover td{background:#fafbfc}
 .btn{padding:10px 24px;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:bold;transition:.2s;display:inline-flex;align-items:center;gap:8px}
 .btn-r{background:var(--primary-light);color:#fff}.btn-r:hover{background:var(--primary)}
@@ -31,7 +33,7 @@ tr:hover td{background:#fafbfc}
 .btn-g{background:transparent;border:1.5px solid #ccc;color:#666}.btn-g:hover{background:#f5f5f5}
 .btn-xs{padding:4px 12px;font-size:12px}
 input,select{padding:10px 14px;border:1.5px solid #ddd;border-radius:8px;font-size:14px;font-family:inherit;width:100%}
-input:focus,select:focus{outline:none;border-color:var(--primary-light);box-shadow:0 0 0 3px rgba(231,76,60,.1)}
+input:focus,select:focus{outline:none;border-color:var(--primary-light);box-shadow:0 0 0 3px rgba(178,34,34,.12)}
 label{font-size:13px;font-weight:bold;display:block;margin-bottom:5px;color:#555}
 .row{display:flex;gap:16px;flex-wrap:wrap}.col{flex:1;min-width:120px}
 .badge{padding:3px 12px;border-radius:12px;font-size:12px;font-weight:bold;display:inline-block}
@@ -41,7 +43,7 @@ label{font-size:13px;font-weight:bold;display:block;margin-bottom:5px;color:#555
 .modal h4{margin-bottom:20px;font-size:19px}
 .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:22px}
 .toast{position:fixed;top:20px;right:20px;padding:14px 32px;border-radius:10px;color:#fff;font-size:14px;z-index:9999;animation:in .3s}
-.toast-ok{background:#27ae60}.toast-err{background:var(--primary-light)}.toast-info{background:var(--navy)}
+.toast-ok{background:#27ae60;box-shadow:0 8px 24px rgba(39,174,96,.3)}.toast-err{background:var(--primary-light);box-shadow:0 8px 24px rgba(139,0,0,.25)}.toast-info{background:var(--navy);box-shadow:0 8px 24px rgba(0,0,0,.3)}
 @keyframes in{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
 .empty{text-align:center;padding:48px;color:var(--muted);font-size:14px}
 .sched-chip{display:inline-block;padding:4px 10px;margin:2px;border-radius:4px;font-size:12px;white-space:nowrap}
@@ -75,6 +77,7 @@ label{font-size:13px;font-weight:bold;display:block;margin-bottom:5px;color:#555
 <div class="mobile-hint">手机用户请访问 <a href="mobile.html" style="color:#856404;font-weight:bold">手机版</a></div>
 
 <nav>
+  <div class="emblem"><img src="" alt="队徽" id="nav-emblem" onclick="setEmblem()" title="点击更换队徽" style="cursor:pointer"></div>
   <h1>&#127937; 仪仗队排班</h1>
   <a class="sel" data-page="members">&#128101; 队员管理</a>
   <a data-page="config">&#9881; 编制设置</a>
@@ -358,6 +361,26 @@ function genWeek(mondayStr,quotas){
 
 // ── 导航 ──
 function navTo(page){document.querySelectorAll('nav a').forEach(a=>a.classList.toggle('sel',a.dataset.page===page))}
+
+// Load emblem from localStorage (base64) or use default
+var EMBLEM_DATAURL='';
+(function(){
+  var e=L('emblem','');
+  if(e){EMBLEM_DATAURL=e;document.getElementById('nav-emblem').src=e;}
+})();
+function setEmblem(){
+  var f=document.createElement('input');f.type='file';f.accept='image/*';
+  f.onchange=function(){
+    var file=f.files[0];if(!file)return;
+    var reader=new FileReader();
+    reader.onload=function(){
+      EMBLEM_DATAURL=reader.result;S('emblem',EMBLEM_DATAURL);document.getElementById('nav-emblem').src=EMBLEM_DATAURL;
+      toast('队徽已更新','toast-ok');
+    };
+    reader.readAsDataURL(file);
+  };
+  f.click();
+}
 
 // ═══════════════════════════════════════
 // 队员管理

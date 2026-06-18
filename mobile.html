@@ -359,6 +359,26 @@ function genWeek(mondayStr,quotas){
 // ── 导航 ──
 function navTo(page){document.querySelectorAll('nav a').forEach(a=>a.classList.toggle('sel',a.dataset.page===page))}
 
+// Load emblem from localStorage (base64) or use default
+var EMBLEM_DATAURL='';
+(function(){
+  var e=L('emblem','');
+  if(e){EMBLEM_DATAURL=e;document.getElementById('nav-emblem').src=e;}
+})();
+function setEmblem(){
+  var f=document.createElement('input');f.type='file';f.accept='image/*';
+  f.onchange=function(){
+    var file=f.files[0];if(!file)return;
+    var reader=new FileReader();
+    reader.onload=function(){
+      EMBLEM_DATAURL=reader.result;S('emblem',EMBLEM_DATAURL);document.getElementById('nav-emblem').src=EMBLEM_DATAURL;
+      toast('队徽已更新','toast-ok');
+    };
+    reader.readAsDataURL(file);
+  };
+  f.click();
+}
+
 // ═══════════════════════════════════════
 // 队员管理
 // ═══════════════════════════════════════
