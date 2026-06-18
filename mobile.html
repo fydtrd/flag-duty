@@ -138,11 +138,11 @@ let countsExLia={};
 (()=>{
   const defs=L('members_default',[]);
   if(!defs.length)return;
-  const hmap={};defs.forEach(m=>{if(m.height)hmap[m.id]=m.height;});
+  const hmap={};defs.forEach(m=>{if(m.height)hmap[m.name]=m.height;});
   let dirty=false;
   members.forEach(m=>{
     if(!m.cohort){m.cohort='25级';dirty=true;}
-    if(m.height===undefined&&hmap[m.id]){m.height=hmap[m.id];dirty=true;}
+    if(m.height===undefined&&hmap[m.name]){m.height=hmap[m.name];dirty=true;}
     if(m.height===undefined){m.height='';dirty=true;}
   });
   if(dirty)S('members',members);
