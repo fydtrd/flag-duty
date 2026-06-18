@@ -113,7 +113,7 @@ let config=L('config',{
   raise:{time:'06:30',roles:[
     {name:'升旗队员',count:14},{name:'旗手',count:3},{name:'指挥',count:1}]},
   lower:{time:'17:30',roles:[
-    {name:'降旗队员',count:11},{name:'旗手',count:3},{name:'指挥',count:1},{name:'跟旗',count:2}]},
+    {name:'降旗队员',count:12},{name:'旗手',count:3},{name:'指挥',count:1},{name:'跟旗',count:2}]},
   lowerPrep:30,
   maxPerWeek:3,
   minRest:1,
@@ -296,7 +296,7 @@ function pageMembers(){
         </select>
       </div>
       ${members.length===0?'<div class="empty">暂无队员</div>':
-      `<table><thead><tr><th>姓名</th><th>届级</th><th>班级</th><th>身份</th><th>性别</th><th>电话</th><th>状态</th><th>累计值班</th><th>操作</th></tr></thead><tbody>
+      `<table><thead><tr><th>姓名</th><th>届级</th><th>班级</th><th>身份</th><th>性别</th><th>身高</th><th>电话</th><th>状态</th><th>累计值班</th><th>操作</th></tr></thead><tbody>
         ${filtered.map(m=>`
           <tr>
             <td><strong>${esc(m.name)}</strong></td>
@@ -304,6 +304,7 @@ function pageMembers(){
             <td>${esc(m.cls||'')}</td>
             <td style="font-size:12px">${(m.tags||[]).length?m.tags.map(t=>`<span class="badge badge-on" style="margin:1px">${t}</span>`).join(''):'<span style="color:var(--muted)">—</span>'}</td>
             <td>${esc(m.gender||'')}</td>
+            <td>${esc(m.height||'')}</td>
             <td>${esc(m.tel||'')}</td>
             <td><span class="badge ${m.status==='active'?'badge-on':'badge-off'}">${m.status==='active'?'在岗':'请假'}</span></td>
             <td>${counts[m.id]||0}次</td>
@@ -326,7 +327,8 @@ function dlgMember(id){
   ov.innerHTML=`<div class="modal">
     <h4>${edit?'编辑队员':'添加队员'}</h4>
     <div class="row"><div class="col"><label>姓名 *</label><input id="fm-name" value="${esc(m.name)}"></div><div class="col"><label>届级</label><select id="fm-cohort"><option value="">—</option><option value="24级" ${m.cohort==='24级'?'selected':''}>24级</option><option value="25级" ${m.cohort==='25级'?'selected':''}>25级</option></select></div></div>
-    <div class="row" style="margin-top:10px"><div class="col"><label>性别</label><input id="fm-gender" value="${esc(m.gender||'')}"></div><div class="col"><label>班级</label><input id="fm-cls" value="${esc(m.cls||'')}"></div></div>
+    <div class="row" style="margin-top:10px"><div class="col"><label>性别</label><input id="fm-gender" value="${esc(m.gender||'')}"></div><div class="col"><label>身高</label><input id="fm-height" value="${esc(m.height||'')}"></div></div>
+    <div class="row" style="margin-top:10px"><div class="col"><label>班级</label><input id="fm-cls" value="${esc(m.cls||'')}"></div><div class="col"></div></div>
     <div class="row" style="margin-top:10px"><div class="col"><label>电话</label><input id="fm-tel" value="${esc(m.tel||'')}"></div><div class="col"></div></div>
     <div style="margin-top:10px"><label>身份标签</label><div style="display:flex;gap:16px;padding-top:4px"><label style="font-weight:normal;display:flex;align-items:center;gap:4px"><input type="checkbox" id="fm-tag-bearer" ${(m.tags||[]).includes('旗手')?'checked':''} style="width:auto"> 旗手</label><label style="font-weight:normal;display:flex;align-items:center;gap:4px"><input type="checkbox" id="fm-tag-cmd" ${(m.tags||[]).includes('指挥')?'checked':''} style="width:auto"> 指挥</label><label style="font-weight:normal;display:flex;align-items:center;gap:4px"><input type="checkbox" id="fm-tag-lia" ${(m.tags||[]).includes('联勤')?'checked':''} style="width:auto"> 联勤</label></div></div>
     <div style="margin-top:10px"><label>状态</label><select id="fm-status"><option value="active" ${m.status==='active'?'selected':''}>在岗</option><option value="leave" ${m.status==='leave'?'selected':''}>请假</option></select></div>
@@ -338,7 +340,7 @@ function dlgMember(id){
   ov.querySelector('#btn-save').onclick=()=>{
     const name=document.getElementById('fm-name').value.trim();
     if(!name)return toast('请输入姓名','toast-err');
-    const data={id:edit?id:uid(),name,cohort:document.getElementById('fm-cohort').value,gender:document.getElementById('fm-gender').value.trim(),cls:document.getElementById('fm-cls').value.trim(),tel:document.getElementById('fm-tel').value.trim(),status:document.getElementById('fm-status').value,tags:(()=>{const t=[];if(document.getElementById('fm-tag-bearer').checked)t.push('旗手');if(document.getElementById('fm-tag-cmd').checked)t.push('指挥');if(document.getElementById('fm-tag-lia').checked)t.push('联勤');return t;})(),sched:m.sched||{}};
+    const data={id:edit?id:uid(),name,cohort:document.getElementById('fm-cohort').value,gender:document.getElementById('fm-gender').value.trim(),height:document.getElementById('fm-height').value.trim(),cls:document.getElementById('fm-cls').value.trim(),tel:document.getElementById('fm-tel').value.trim(),status:document.getElementById('fm-status').value,tags:(()=>{const t=[];if(document.getElementById('fm-tag-bearer').checked)t.push('旗手');if(document.getElementById('fm-tag-cmd').checked)t.push('指挥');if(document.getElementById('fm-tag-lia').checked)t.push('联勤');return t;})(),sched:m.sched||{}};
     if(edit){const i=members.findIndex(x=>x.id===id);members[i]=data}else members.push(data);
     S('members',members);ov.remove();pageMembers();toast(edit?'已更新':'已添加','toast-ok');
   };
