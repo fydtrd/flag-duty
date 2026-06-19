@@ -860,7 +860,9 @@ function pageConfig(){
           <tr><td>联勤</td><td><strong>${lias.length}</strong></td><td style="text-align:left">${lias.map(m=>esc(m.name)).join('、')||'<span style="color:var(--muted)">无</span>'}</td></tr>`;
         })()}
       </tbody></table></div>
-    <button class="btn btn-r" onclick="saveConfig()">&#128190; 保存设置</button>`;
+    <button class="btn btn-r" onclick="saveConfig()">&#128190; 保存设置</button>
+    <button class="btn btn-b" onclick="exportAllData()" style="margin-left:8px">&#128229; 导出数据</button>
+    <button class="btn btn-o" onclick="importAllData()" style="margin-left:8px">&#128228; 导入数据</button>`;
 }
 
 function addRole(type){config[type].roles.push({name:'新角色',count:1});pageConfig()}
@@ -971,6 +973,38 @@ function doSchedule(){
   pageSchedule();toast('排班已生成','toast-ok');
 }
 function clearSched(){if(!confirm('确定清空所有排班？'))return;schedule=[];recoCounts();S('schedule',schedule);pageSchedule();toast('已清空','toast-info')}
+function exportAllData(){
+  const data={};
+  for(let i=0;i<localStorage.length;i++){
+    const k=localStorage.key(i);
+    if(k.startsWith('fd_')) data[k]=localStorage.getItem(k);
+  }
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='flag-duty-data-'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();URL.revokeObjectURL(a.href);
+  toast('数据已导出','toast-ok');
+}
+function importAllData(){
+  const inp=document.createElement('input');inp.type='file';inp.accept='.json';
+  inp.onchange=e=>{
+    const f=e.target.files[0];if(!f)return;
+    const r=new FileReader();
+    r.onload=ev=>{
+      try{
+        const data=JSON.parse(ev.target.result);
+        let n=0;
+        for(const [k,v] of Object.entries(data)){
+          if(k.startsWith('fd_')){localStorage.setItem(k,typeof v==='string'?v:JSON.stringify(v));n++;}
+        }
+        toast('已导入'+n+'项数据，刷新页面生效','toast-ok');
+        setTimeout(()=>location.reload(),1500);
+      }catch{toast('文件格式错误','toast-err');}
+    };
+    r.readAsText(f);
+  };
+  inp.click();
+}
 
 function renderSched(){
   if(!schedule.length)return'<div class="card"><div class="empty">暂无排班数据</div></div>';
