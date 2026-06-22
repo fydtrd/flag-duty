@@ -819,9 +819,7 @@ function importSchedFromCSV(){
     const r=new FileReader();
     r.onload=ev=>{
       const text=ev.target.result;
-      const lines=text.split(/
-|
-/).filter(l=>l.trim());
+      const lines=text.split(/\n|\r\n/).filter(l=>l.trim());
       let imported=0,errors=0;
       for(let i=1;i<lines.length;i++){
         const cols=parseCSVLine(lines[i]);
@@ -830,7 +828,7 @@ function importSchedFromCSV(){
         const member=members.find(m=>m.name===name);
         if(!member){errors++;continue;}
         if(!member.sched)member.sched={};
-        const weekdayMap={'周一':'Mon','周二':'Tue','周三':'Wed','Thu':'Thu','周五':'Fri','周日':'Sun',
+        const weekdayMap={'周一':'Mon','周二':'Tue','周三':'Wed','周四':'Thu','周五':'Fri','周日':'Sun',
                           'Mon':'Mon','Tue':'Tue','Wed':'Wed','Thu':'Thu','Fri':'Fri','Sun':'Sun',
                           '星期一':'Mon','星期二':'Tue','星期三':'Wed','星期四':'Thu','星期五':'Fri','星期日':'Sun',
                           '1':'Mon','2':'Tue','3':'Wed','4':'Thu','5':'Fri','0':'Sun'};
@@ -896,6 +894,7 @@ function parseCSVLine(line){
   result.push(current);
   return result;
 }
+
 
 function delMember(id){
 
@@ -999,6 +998,7 @@ function pageSchedule(){
           <button class="btn btn-r" onclick="doSchedule()">&#129302; 自动排班</button>
           <button class="btn btn-o" onclick="clearSched()">清空</button>
           <button class="btn btn-b" onclick="exportExcel()">&#128229; 导出CSV</button>
+          <button class="btn btn-b" onclick="importSchedFromCSV()">&#128228; 导入课表</button>
           <button class="btn btn-b" onclick="importSchedFromCSV()">&#128228; 导入课表</button>
           <button class="btn btn-b" onclick="window.print()">&#128424; 打印</button>
         </div>

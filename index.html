@@ -809,6 +809,8 @@ function dlgSchedule(id){
 }
 
 
+
+
 function importSchedFromCSV(){
   const inp=document.createElement('input');inp.type='file';inp.accept='.csv,.txt,.json';
   inp.onchange=e=>{
@@ -816,39 +818,24 @@ function importSchedFromCSV(){
     const r=new FileReader();
     r.onload=ev=>{
       const text=ev.target.result;
-      const lines=text.split(/
-|
-/).filter(l=>l.trim());
+      const lines=text.split(/\n|\r\n/).filter(l=>l.trim());
       let imported=0,errors=0;
-      
       for(let i=1;i<lines.length;i++){
         const cols=parseCSVLine(lines[i]);
-        if(cols.length<14)continue; // 姓名,性别,届级,班级,电话,标签,Mon-5,Tue-5,Wed-5,Thu-5,Fri-5,Sun-5,Mon-6,...  or Mon-5,Mon-6,Mon-7,Mon-8,...
-        
+        if(cols.length<2)continue;
         const name=cols[0].trim();if(!name)continue;
-        // Find member by name (case-insensitive)
         const member=members.find(m=>m.name===name);
         if(!member){errors++;continue;}
         if(!member.sched)member.sched={};
-        
-        // Check format: cols[1] onwards could be day-period pairs
-        // Format 1: 每条记录: 姓名, 星期几, 节次, 星期几, 节次, ...
-        // Format 2: 综合信息表格式: 姓名, 性别, 届级, 班级, 电话, 标签, [Mon-5, Mon-6,...]
-        // Try to detect format
-        
-        // Check if col 1 looks like a weekday
         const weekdayMap={'周一':'Mon','周二':'Tue','周三':'Wed','周四':'Thu','周五':'Fri','周日':'Sun',
                           'Mon':'Mon','Tue':'Tue','Wed':'Wed','Thu':'Thu','Fri':'Fri','Sun':'Sun',
                           '星期一':'Mon','星期二':'Tue','星期三':'Wed','星期四':'Thu','星期五':'Fri','星期日':'Sun',
                           '1':'Mon','2':'Tue','3':'Wed','4':'Thu','5':'Fri','0':'Sun'};
-        
         if(cols[1]&&weekdayMap[cols[1]]!==undefined){
-          // Format: 姓名, 星期, 节次, 星期, 节次, ...
           for(let j=1;j<cols.length-1;j+=2){
             const wd=weekdayMap[cols[j].trim()];
             const period=parseInt(cols[j+1]);
             if(wd!==undefined&&!isNaN(period)){
-              // Mark as busy
               const sd={'Mon':0,'Tue':1,'Wed':2,'Thu':3,'Fri':4,'Sun':5}[wd];
               if(sd!==undefined){
                 if(!member.sched[sd])member.sched[sd]={};
@@ -858,14 +845,9 @@ function importSchedFromCSV(){
           }
           imported++;
         }else{
-          // Format: 综合信息表 - cols after name could be period labels
-          // First, check if there are 11*6=66 period columns or a compact format
-          // Skip - try day header matching
           const firstRow=lines[0].split(/[,，]/).map(c=>c.trim());
-          let di=-1,pi=-1;
           for(let k=1;k<firstRow.length&&k<30;k++){
             const h=firstRow[k];if(!h)continue;
-            // Match patterns like "Mon-5", "周一第5节", etc.
             for(const [wlabel,wsd] of Object.entries({
               'Mon':0,'Tue':1,'Wed':2,'Thu':3,'Fri':4,'Sun':5,
               '周一':0,'周二':1,'周三':2,'周四':3,'周五':4,'周日':5
@@ -876,8 +858,8 @@ function importSchedFromCSV(){
                   const p=parseInt(pn[0]);
                   if(p>=1&&p<=11){
                     const week={'Mon':0,'Tue':1,'Wed':2,'Thu':3,'Fri':4,'Sun':5}[wlabel];
-                    if(week!==undefined&&col[k]){
-                      const val=col[k].trim();
+                    if(week!==undefined&&cols[k]){
+                      const val=cols[k].trim();
                       if(val==='×'||val==='√'||val==='有课'||val==='1'||val.toLowerCase()==='x'||val.toLowerCase()==='busy'){
                         if(!member.sched[week])member.sched[week]={};
                         member.sched[week][p]=true;
@@ -895,7 +877,7 @@ function importSchedFromCSV(){
       toast('导入完成: '+imported+'人成功'+(errors?', '+errors+'人未找到':'')+(imported?'，请刷新查看':''));
       if(imported)setTimeout(()=>location.reload(),1500);
     };
-    r.onreadAsText(f,'UTF-8');
+    r.readAsText(f,'UTF-8');
   };
   inp.click();
 }
@@ -911,6 +893,7 @@ function parseCSVLine(line){
   result.push(current);
   return result;
 }
+
 
 function delMember(id){
   if(!confirm('确定删除该队员？'))return;
