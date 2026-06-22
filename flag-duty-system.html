@@ -18,8 +18,8 @@
   --gold: #D4AF37;
   --gold-light: #F0D060;
   --text: #e6e6e6;
-  --text-secondary: #8b949e;
-  --text-muted: #6e7681;
+  --text-secondary: #b0b8c4;
+  --text-muted: #8e96a2;
   --border-glass: rgba(255,255,255,0.08);
   --shadow-lg: 0 8px 32px rgba(0,0,0,0.4);
   --shadow-card: 0 4px 24px rgba(0,0,0,0.3), 0 1px 0 rgba(255,255,255,0.05) inset;
@@ -105,7 +105,7 @@ nav a{
   gap: 12px;
   padding: 15px 32px;
   font-size: 14px;
-  color: rgba(255,255,255,0.5);
+  color: rgba(255,255,255,0.65);
   cursor: pointer;
   border-left: 3px solid transparent;
   transition: all 0.25s ease;
@@ -114,8 +114,8 @@ nav a{
   position: relative;
 }
 nav a:hover{
-  background: rgba(255,255,255,0.03);
-  color: rgba(255,255,255,0.85);
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.95);
   border-left-color: rgba(212,175,55,0.3);
 }
 nav a.sel{
@@ -128,7 +128,7 @@ nav a.sel{
 nav .foot{
   padding: 28px;
   font-size: 12px;
-  color: rgba(255,255,255,0.25);
+  color: rgba(255,255,255,0.4);
   text-align: center;
   margin-top: auto;
   letter-spacing: 1px;
@@ -187,7 +187,7 @@ h2::after{
 .card h3{
   font-size: 16px;
   margin-bottom: 20px;
-  color: #e6e6e6;
+  color: #f0f0f0;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -265,7 +265,7 @@ input:focus,select:focus{
   border-color: rgba(198,40,40,0.4);
   box-shadow: 0 0 0 3px rgba(198,40,40,0.1), 0 0 20px rgba(198,40,40,0.05);
 }
-input::placeholder{color: rgba(255,255,255,0.2)}
+input::placeholder{color: rgba(255,255,255,0.35)}
 select option{background: #161b22; color: #e6e6e6}
 
 label{
@@ -725,7 +725,7 @@ function pageMembers(){
             <td><strong>${esc(m.name)}</strong></td>
             <td>${esc(m.cohort||'')}</td>
             <td>${esc(m.cls||'')}</td>
-            <td style="font-size:12px">${(m.tags||[]).length?m.tags.map(t=>`<span class="badge badge-on" style="margin:1px">${t}</span>`).join(''):'<span style="color:var(--muted)">—</span>'}</td>
+            <td style="font-size:12px">${(m.tags||[]).length?m.tags.map(t=>`<span class="badge badge-on" style="margin:1px">${t}</span>`).join(''):'<span style="color:var(--text-secondary)">—</span>'}</td>
             <td>${esc(m.gender||'')}</td>
             <td>${esc(m.height||'')}</td>
             <td>${esc(m.tel||'')}</td>
@@ -774,12 +774,12 @@ function dlgSchedule(id){
   const m=members.find(x=>x.id===id);if(!m)return;if(!m.sched)m.sched={};
   const ov=document.createElement('div');ov.className='modal-overlay';
   ov.innerHTML=`<div class="modal" style="min-width:700px">
-    <h4>${esc(m.name)} 的课表 <span style="font-size:14px;color:var(--muted);font-weight:normal">点击格子切换</span></h4>
+    <h4>${esc(m.name)} 的课表 <span style="font-size:14px;color:var(--text-secondary);font-weight:normal">点击格子切换</span></h4>
     <table style="font-size:12px">
       <thead><tr><th>节次</th>${WEEKDAYS.map(d=>`<th>${d}</th>`).join('')}</tr></thead>
       <tbody>${PERIODS.map(p=>`
         <tr>
-          <td style="font-weight:bold;font-size:11px;color:var(--muted);text-align:left">${p.label}<br><small>${p.time}</small></td>
+          <td style="font-weight:bold;font-size:11px;color:var(--text-secondary);text-align:left">${p.label}<br><small>${p.time}</small></td>
           ${WEEKDAYS.map((_,di)=>{
             const sd=SD_JSDAY[di];
             const has=m.sched&&m.sched[sd]&&m.sched[sd][p.n];
@@ -787,7 +787,7 @@ function dlgSchedule(id){
           }).join('')}
         </tr>`).join('')}
       </tbody></table>
-    <div style="margin-top:10px;font-size:13px;color:var(--muted)">
+    <div style="margin-top:10px;font-size:13px;color:var(--text-secondary)">
       <span style="background:#C62828;color:#fff;padding:2px 8px;border-radius:3px;margin-right:8px">红色=有课</span>
       <span style="background:#2ea043;color:#fff;padding:2px 8px;border-radius:3px">绿色=无课</span>
     </div>
@@ -821,7 +821,7 @@ function pageConfig(){
   const lp=lowerPeriods();
   const pn=lp.map(n=>PERIODS.find(p=>p.n===n)).filter(Boolean);
   function rhtml(type,label,desc){
-    return`<div class="card"><h3>${label} <span style="font-weight:normal;font-size:12px;color:var(--muted)">${desc}</span></h3>
+    return`<div class="card"><h3>${label} <span style="font-weight:normal;font-size:12px;color:var(--text-secondary)">${desc}</span></h3>
       ${c[type].roles.map((r,i)=>`
         <div class="row" style="align-items:end;margin-bottom:8px">
           <div class="col"><label>角色名</label><input value="${esc(r.name)}" data-rtype="${type}" data-ri="${i}" data-rf="name"></div>
@@ -840,7 +840,7 @@ function pageConfig(){
       <div class="row">
         <div class="col" style="max-width:160px"><label>准备时间(分钟)</label><input type="number" value="${c.lowerPrep}" min="0" max="120" id="cfg-prep"></div>
       </div>
-      ${pn.length?`<div style="margin-top:8px;font-size:13px;color:var(--muted)">降旗时段覆盖：${pn.map(p=>p.label+'('+p.time+')').join('、')}</div>`:'<div style="margin-top:8px;font-size:13px;color:var(--primary-light)">提示：当前降旗时间不在课表时间范围内</div>'}
+      ${pn.length?`<div style="margin-top:8px;font-size:13px;color:var(--text-secondary)">降旗时段覆盖：${pn.map(p=>p.label+'('+p.time+')').join('、')}</div>`:'<div style="margin-top:8px;font-size:13px;color:var(--primary-light)">提示：当前降旗时间不在课表时间范围内</div>'}
     </div>
     <div class="card"><h3>排班规则</h3>
       <div class="row">
@@ -855,9 +855,9 @@ function pageConfig(){
           const bearers=active.filter(m=>(m.tags||[]).includes('旗手'));
           const cmds=active.filter(m=>(m.tags||[]).includes('指挥'));
           const lias=active.filter(m=>(m.tags||[]).includes('联勤'));
-          return`<tr><td>旗手</td><td><strong>${bearers.length}</strong></td><td style="text-align:left">${bearers.map(m=>esc(m.name)).join('、')||'<span style="color:var(--muted)">无</span>'}</td></tr>
-          <tr><td>指挥</td><td><strong>${cmds.length}</strong></td><td style="text-align:left">${cmds.map(m=>esc(m.name)).join('、')||'<span style="color:var(--muted)">无</span>'}</td></tr>
-          <tr><td>联勤</td><td><strong>${lias.length}</strong></td><td style="text-align:left">${lias.map(m=>esc(m.name)).join('、')||'<span style="color:var(--muted)">无</span>'}</td></tr>`;
+          return`<tr><td>旗手</td><td><strong>${bearers.length}</strong></td><td style="text-align:left">${bearers.map(m=>esc(m.name)).join('、')||'<span style="color:var(--text-secondary)">无</span>'}</td></tr>
+          <tr><td>指挥</td><td><strong>${cmds.length}</strong></td><td style="text-align:left">${cmds.map(m=>esc(m.name)).join('、')||'<span style="color:var(--text-secondary)">无</span>'}</td></tr>
+          <tr><td>联勤</td><td><strong>${lias.length}</strong></td><td style="text-align:left">${lias.map(m=>esc(m.name)).join('、')||'<span style="color:var(--text-secondary)">无</span>'}</td></tr>`;
         })()}
       </tbody></table></div>
     <button class="btn btn-r" onclick="saveConfig()">&#128190; 保存设置</button>`;
@@ -891,7 +891,7 @@ function renderQuotaUI(){
     '</div>';
   }
   return '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">'+
-    '<span style="font-weight:bold;font-size:12px;color:var(--muted)">人员配置要求(留空=不限)</span>'+
+    '<span style="font-weight:bold;font-size:12px;color:var(--text-secondary)">人员配置要求(留空=不限)</span>'+
     row('gr','大升旗')+
     row('ra','升旗')+
     row('lo','降旗')+
@@ -990,7 +990,7 @@ function renderSched(){
 
     function rrows(roles,type,cls){
       return roles.map((r,ri)=>`
-        <tr><td class="rl">${r.name}<br><small style="color:var(--muted);font-weight:normal">${r.count}人</small></td>
+        <tr><td class="rl">${r.name}<br><small style="color:var(--text-secondary);font-weight:normal">${r.count}人</small></td>
         ${w.map(e=>{
           const ids_=(e[type]||[])[ri]||[];
           const names=ids_.map(id=>{let x='';if(type==='lo'){const lp=lowerPeriods();const m_=gm(id);if(m_&&hasClass(m_,e.sd,lp))x=' &#9888;'}return esc(mn(id))+x});
@@ -1012,7 +1012,7 @@ function renderSched(){
         <div style="width:160px;flex-shrink:0;border-left:1px solid var(--border);padding-left:16px">
           <div style="font-size:14px;font-weight:bold;margin-bottom:8px;color:#555">本周出勤</div>
           ${wm.map(m=>{const n=countsExLia[m.id]||0;const nx=Math.max(...wm.map(x=>countsExLia[x.id]||0),1);const bw=Math.round(n/nx*60);return`<div style="font-size:13px;padding:3px 0;display:flex;align-items:center;justify-content:space-between"><span>${esc(m.name)}</span><span style="color:var(--primary-light);font-weight:bold">${n}<span class="bar" style="width:${bw}px"></span></span></div>`}).join('')}
-          ${!wm.length?'<div style="font-size:13px;color:var(--muted)">暂无</div>':''}
+          ${!wm.length?'<div style="font-size:13px;color:var(--text-secondary)">暂无</div>':''}
         </div></div></div>`;
   }).join('');
 }
@@ -1026,6 +1026,7 @@ function swapCell(dateStr,type,ri){
   const active=members.filter(m=>m.status==='active');
   const lp=lowerPeriods();
   const tmap={gr:'大升旗',ra:'升旗',lo:'降旗'};
+  const selTags=[0,0,0];
 
   let elig=active;
   if(type==='lo'){elig=active.filter(m=>!hasClass(m,e.sd,lp));if(!elig.length)return toast('无课队员不足','toast-err')}
@@ -1040,7 +1041,7 @@ function swapCell(dateStr,type,ri){
       <label><input type="checkbox" id="swap-tag-bearer" ${selTags[0]?'checked':''}> 旗手</label>
       <label><input type="checkbox" id="swap-tag-cmd" ${selTags[1]?'checked':''}> 指挥</label>
       <label><input type="checkbox" id="swap-tag-lia" ${selTags[2]?'checked':''}> 联勤</label>
-      <span style="font-size:11px;color:var(--muted)">(勾选=只看有该标签的)</span>
+      <span style="font-size:11px;color:var(--text-secondary)">(勾选=只看有该标签的)</span>
     </div>`;
 
   const ov=document.createElement('div');ov.className='modal-overlay';
@@ -1049,12 +1050,12 @@ function swapCell(dateStr,type,ri){
     ${filterBar}
     <div style="max-height:340px;overflow-y:auto" id="swap-list">${elig.map(m=>{
       const chk=curIds.includes(m.id);const cf=type==='lo'&&hasClass(m,e.sd,lp);const or=dayIds.has(m.id);
-      return`<label class="swap-row" style="display:flex;align-items:center;gap:8px;padding:7px;border-radius:6px;cursor:pointer;${chk?'background:#fef0f0':''};${or?'opacity:.45':''}" onmouseover="this.style.background='${chk?'#fef0f0':'#f5f5f5'}'" onmouseout="this.style.background='${chk?'#fef0f0':''}'" data-name="${esc(m.name)}" data-tags="${(m.tags||[]).join(',')}">
+      return`<label class="swap-row" style="display:flex;align-items:center;gap:8px;padding:7px;border-radius:6px;cursor:pointer;${chk?'background:rgba(198,40,40,0.15)':''};${or?'opacity:.45':''}" onmouseover="this.style.background='${chk?'rgba(198,40,40,0.2)':'rgba(255,255,255,0.04)'}'" onmouseout="this.style.background='${chk?'rgba(198,40,40,0.15)':''}'" data-name="${esc(m.name)}" data-tags="${(m.tags||[]).join(',')}">
         <input type="checkbox" value="${m.id}" ${chk?'checked':''} ${or?'disabled':''} style="width:auto">
-        <span>${esc(m.name)}</span>${(m.tags||[]).length?`<span style="font-size:10px">${m.tags.map(t=>`<span class="badge badge-on" style="margin:1px">${t}</span>`).join('')}</span>`:''}<span style="font-size:11px;color:var(--muted)">${esc(m.cls||'')}·${counts[m.id]||0}次</span>
-        ${cf?'<span style="color:var(--primary-light);font-size:11px">&#9888;有课</span>':''}${or?'<span style="color:var(--muted);font-size:11px">已分配</span>':''}
+        <span>${esc(m.name)}</span>${(m.tags||[]).length?`<span style="font-size:10px">${m.tags.map(t=>`<span class="badge badge-on" style="margin:1px">${t}</span>`).join('')}</span>`:''}<span style="font-size:11px;color:var(--text-secondary)">${esc(m.cls||'')}·${counts[m.id]||0}次</span>
+        ${cf?'<span style="color:var(--primary-light);font-size:11px">&#9888;有课</span>':''}${or?'<span style="color:var(--text-secondary);font-size:11px">已分配</span>':''}
       </label>`}).join('')}</div>
-    <div style="margin-top:8px;font-size:11px;color:var(--muted)">已选 <span id="cnt">${curIds.length}</span>/${role.count}</div>
+    <div style="margin-top:8px;font-size:11px;color:var(--text-secondary)">已选 <span id="cnt">${curIds.length}</span>/${role.count}</div>
     <div class="modal-actions">
       <button class="btn btn-g" onclick="this.closest('.modal-overlay').remove()">取消</button>
       <button class="btn btn-r" id="swap-save">保存</button>
@@ -1112,8 +1113,9 @@ function pageStats(){
   const mx=Math.max(...Object.values(countsExLia),1);
   const recent=[...schedule].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,20);
   const tmap={gr:'大升旗',ra:'升旗',lo:'降旗'};
+  const selTags=[0,0,0];
   document.getElementById('main').innerHTML=h2c('&#128202; 值班统计')+`
-    <div class="card"><h3>全队累计 <span style="font-weight:normal;font-size:14px;color:var(--muted)">${totalExLia}人次（不含跟旗）</span></h3>
+    <div class="card"><h3>全队累计 <span style="font-weight:normal;font-size:14px;color:var(--text-secondary)">${totalExLia}人次（不含跟旗）</span></h3>
       ${sorted.length?`<table><thead><tr><th>排名</th><th>姓名</th><th>班级</th><th>升降旗</th><th>跟旗</th><th>占比</th><th>状态</th></tr></thead><tbody>
         ${sorted.map((m,i)=>`
           <tr><td>${i+1}</td><td><strong>${esc(m.name)}</strong></td><td>${esc(m.cls||'')}</td>
