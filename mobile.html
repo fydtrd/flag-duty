@@ -714,7 +714,8 @@ function pageMembers(){
   const filtered=memberCohort==='全部'?members:members.filter(m=>(m.cohort||'')===memberCohort);
   document.getElementById('main').innerHTML=h2c('&#128101; 队员管理', '<button class="btn btn-o btn-xs" onclick="importSchedFromCSV()" style="margin-left:16px">&#128228; 批量导入课表</button>','<button class="btn btn-r btn-xs" onclick="dlgMember()">+ 添加队员</button>')+`
     <div class="card">
-      <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px">
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+        <button class="btn btn-r" onclick="dlgMember()" style="padding:8px 20px;font-size:14px">+ 添加队员</button>
         <label style="font-size:13px;font-weight:bold">届级：</label>
         <select id="cohort-filter" onchange="memberCohort=this.value;pageMembers()" style="width:auto;padding:8px 14px">
           <option value="全部" ${memberCohort==='全部'?'selected':''}>全部 (${members.length}人)</option>
@@ -744,6 +745,596 @@ function pageMembers(){
     </div>`;
   document.querySelector('nav .foot').textContent=`队员 ${members.filter(m=>m.status==='active').length}/${members.length} 人 · 排班 ${schedule.length} 天`;
 }
+function h2c(title,extra){return`<h2>${title}${extra||''}</h2>`}
+
+function dlgMember(id){
+  const edit=!!id;
+  const m=edit?members.find(x=>x.id===id):{name:'',gender:'',cls:'',cohort:'',tel:'',status:'active'};
+  const ov=document.createElement('div');ov.className='modal-overlay';
+  ov.innerHTML=`<div class="modal">
+    <h4>${edit?'编辑队员':'添加队员'}</h4>
+    <div class="row"><div class="col"><label>姓名 *</label><input id="fm-name" value="${esc(m.name)}"></div><div class="col"><label>届级</label><select id="fm-cohort"><option value="">—</option><option value="24级" ${m.cohort==='24级'?'selected':''}>24级</option><option value="25级" ${m.cohort==='25级'?'selected':''}>25级</option></select></div></div>
+    <div class="row" style="margin-top:10px"><div class="col"><label>性别</label><input id="fm-gender" value="${esc(m.gender||'')}"></div><div class="col"><label>身高</label><input id="fm-height" value="${esc(m.height||'')}"></div></div>
+    <div class="row" style="margin-top:10px"><div class="col"><label>班级</label><input id="fm-cls" value="${esc(m.cls||'')}"></div><div class="col"></div></div>
+    <div class="row" style="margin-top:10px"><div class="col"><label>电话</label><input id="fm-tel" value="${esc(m.tel||'')}"></div><div class="col"></div></div>
+    <div style="margin-top:10px"><label>身份标签</label><div style="display:flex;gap:16px;padding-top:4px"><label style="font-weight:normal;display:flex;align-items:center;gap:4px"><input type="checkbox" id="fm-tag-bearer" ${(m.tags||[]).includes('旗手')?'checked':''} style="width:auto"> 旗手</label><label style="font-weight:normal;display:flex;align-items:center;gap:4px"><input type="checkbox" id="fm-tag-cmd" ${(m.tags||[]).includes('指挥')?'checked':''} style="width:auto"> 指挥</label><label style="font-weight:normal;display:flex;align-items:center;gap:4px"><input type="checkbox" id="fm-tag-lia" ${(m.tags||[]).includes('联勤')?'checked':''} style="width:auto"> 联勤</label></div></div>
+    <div style="margin-top:10px"><label>状态</label><select id="fm-status"><option value="active" ${m.status==='active'?'selected':''}>在岗</option><option value="leave" ${m.status==='leave'?'selected':''}>请假</option></select></div>
+    <div class="modal-actions">
+      <button class="btn btn-g" onclick="this.closest('.modal-overlay').remove()">取消</button>
+      <button class="btn btn-r" id="btn-save">保存</button>
+    </div></div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('#btn-save').onclick=()=>{
+    const name=document.getElementById('fm-name').value.trim();
+    if(!name)return toast('请输入姓名','toast-err');
+    const data={id:edit?id:uid(),name,cohort:document.getElementById('fm-cohort').value,gender:document.getElementById('fm-gender').value.trim(),height:document.getElementById('fm-height').value.trim(),cls:document.getElementById('fm-cls').value.trim(),tel:document.getElementById('fm-tel').value.trim(),status:document.getElementById('fm-status').value,tags:(()=>{const t=[];if(document.getElementById('fm-tag-bearer').checked)t.push('旗手');if(document.getElementById('fm-tag-cmd').checked)t.push('指挥');if(document.getElementById('fm-tag-lia').checked)t.push('联勤');return t;})(),sched:m.sched||{}};
+    if(edit){const i=members.findIndex(x=>x.id===id);members[i]=data}else members.push(data);
+    S('members',members);ov.remove();pageMembers();toast(edit?'已更新':'已添加','toast-ok');
+  };
+  ov.addEventListener('click',e=>{if(e.target===ov)ov.remove()});
+}
+
+function dlgSchedule(id){
+  const m=members.find(x=>x.id===id);if(!m)return;if(!m.sched)m.sched={};
+  const ov=document.createElement('div');ov.className='modal-overlay';
+  ov.innerHTML=`<div class="modal" style="min-width:700px">
+    <h4>${esc(m.name)} 的课表 <span style="font-size:14px;color:var(--text-secondary);font-weight:normal">点击格子切换</span></h4>
+    <table style="font-size:12px">
+      <thead><tr><th>节次</th>${WEEKDAYS.map(d=>`<th>${d}</th>`).join('')}</tr></thead>
+      <tbody>${PERIODS.map(p=>`
+        <tr>
+          <td style="font-weight:bold;font-size:11px;color:var(--text-secondary);text-align:left">${p.label}<br><small>${p.time}</small></td>
+          ${WEEKDAYS.map((_,di)=>{
+            const sd=SD_JSDAY[di];
+            const has=m.sched&&m.sched[sd]&&m.sched[sd][p.n];
+            return`<td class="cell ${has?'busy':'free'}" data-sd="${sd}" data-p="${p.n}"></td>`;
+          }).join('')}
+        </tr>`).join('')}
+      </tbody></table>
+    <div style="margin-top:10px;font-size:13px;color:var(--text-secondary)">
+      <span style="background:#C62828;color:#fff;padding:2px 8px;border-radius:3px;margin-right:8px">红色=有课</span>
+      <span style="background:#2ea043;color:#fff;padding:2px 8px;border-radius:3px">绿色=无课</span>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-g" onclick="this.closest('.modal-overlay').remove()">关闭</button>
+      <button class="btn btn-r" id="btn-sched-save">保存课表</button>
+    </div></div>`;
+  document.body.appendChild(ov);
+  ov.querySelectorAll('.cell').forEach(c=>{
+    c.addEventListener('click',()=>{
+      const sd=parseInt(c.dataset.sd),p=parseInt(c.dataset.p);
+      if(!m.sched[sd])m.sched[sd]={};
+      m.sched[sd][p]=!m.sched[sd][p];
+      c.classList.toggle('busy',m.sched[sd][p]);c.classList.toggle('free',!m.sched[sd][p]);
+    });
+  });
+  ov.querySelector('#btn-sched-save').onclick=()=>{S('members',members);ov.remove();toast('课表已保存','toast-ok')};
+  ov.addEventListener('click',e=>{if(e.target===ov)ov.remove()});
+}
+
+
+
+
+function importSchedFromCSV(){
+  const inp=document.createElement('input');inp.type='file';inp.accept='.csv,.txt,.json';
+  inp.onchange=e=>{
+    const f=e.target.files[0];if(!f)return;
+    const r=new FileReader();
+    r.onload=ev=>{
+      const text=ev.target.result;
+      const lines=text.split(/\n|\r\n/).filter(l=>l.trim());
+      let imported=0,errors=0;
+      for(let i=1;i<lines.length;i++){
+        const cols=parseCSVLine(lines[i]);
+        if(cols.length<2)continue;
+        const name=cols[0].trim();if(!name)continue;
+        const member=members.find(m=>m.name===name);
+        if(!member){errors++;continue;}
+        if(!member.sched)member.sched={};
+        const weekdayMap={'周一':'Mon','周二':'Tue','周三':'Wed','周四':'Thu','周五':'Fri','周日':'Sun',
+                          'Mon':'Mon','Tue':'Tue','Wed':'Wed','Thu':'Thu','Fri':'Fri','Sun':'Sun',
+                          '星期一':'Mon','星期二':'Tue','星期三':'Wed','星期四':'Thu','星期五':'Fri','星期日':'Sun',
+                          '1':'Mon','2':'Tue','3':'Wed','4':'Thu','5':'Fri','0':'Sun'};
+        if(cols[1]&&weekdayMap[cols[1]]!==undefined){
+          for(let j=1;j<cols.length-1;j+=2){
+            const wd=weekdayMap[cols[j].trim()];
+            const period=parseInt(cols[j+1]);
+            if(wd!==undefined&&!isNaN(period)){
+              const sd={'Mon':0,'Tue':1,'Wed':2,'Thu':3,'Fri':4,'Sun':5}[wd];
+              if(sd!==undefined){
+                if(!member.sched[sd])member.sched[sd]={};
+                member.sched[sd][period]=true;
+              }
+            }
+          }
+          imported++;
+        }else{
+          const firstRow=lines[0].split(/[,，]/).map(c=>c.trim());
+          for(let k=1;k<firstRow.length&&k<30;k++){
+            const h=firstRow[k];if(!h)continue;
+            for(const [wlabel,wsd] of Object.entries({
+              'Mon':0,'Tue':1,'Wed':2,'Thu':3,'Fri':4,'Sun':5,
+              '周一':0,'周二':1,'周三':2,'周四':3,'周五':4,'周日':5
+            })){
+              if(h.includes(wlabel)){
+                const pn=h.match(/\d+/);
+                if(pn){
+                  const p=parseInt(pn[0]);
+                  if(p>=1&&p<=11){
+                    const week={'Mon':0,'Tue':1,'Wed':2,'Thu':3,'Fri':4,'Sun':5}[wlabel];
+                    if(week!==undefined&&cols[k]){
+                      const val=cols[k].trim();
+                      if(val==='×'||val==='√'||val==='有课'||val==='1'||val.toLowerCase()==='x'||val.toLowerCase()==='busy'){
+                        if(!member.sched[week])member.sched[week]={};
+                        member.sched[week][p]=true;
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          imported++;
+        }
+      }
+      S('members',members);
+      toast('导入完成: '+imported+'人成功'+(errors?', '+errors+'人未找到':'')+(imported?'，请刷新查看':''));
+      if(imported)setTimeout(()=>location.reload(),1500);
+    };
+    r.readAsText(f,'UTF-8');
+  };
+  inp.click();
+}
+
+function parseCSVLine(line){
+  const result=[];let current='';let inQuotes=false;
+  for(let i=0;i<line.length;i++){
+    const ch=line[i];
+    if(ch==='"'){inQuotes=!inQuotes;continue}
+    if((ch===','||ch==='，')&&!inQuotes){result.push(current);current='';}
+    else current+=ch;
+  }
+  result.push(current);
+  return result;
+}
+
+
+function delMember(id){
+  if(!confirm('确定删除该队员？'))return;
+  members=members.filter(m=>m.id!==id);S('members',members);pageMembers();toast('已删除','toast-info');
+}
+
+// ═══════════════════════════════════════
+// 编制设置
+// ═══════════════════════════════════════
+function pageConfig(){
+  const c=config;
+  const lp=lowerPeriods();
+  const pn=lp.map(n=>PERIODS.find(p=>p.n===n)).filter(Boolean);
+  function rhtml(type,label,desc){
+    return`<div class="card"><h3>${label} <span style="font-weight:normal;font-size:12px;color:var(--text-secondary)">${desc}</span></h3>
+      ${c[type].roles.map((r,i)=>`
+        <div class="row" style="align-items:end;margin-bottom:8px">
+          <div class="col"><label>角色名</label><input value="${esc(r.name)}" data-rtype="${type}" data-ri="${i}" data-rf="name"></div>
+          <div class="col" style="max-width:70px"><label>人数</label><input type="number" value="${r.count}" min="1" max="30" data-rtype="${type}" data-ri="${i}" data-rf="count"></div>
+          ${c[type].roles.length>1?`<div style="padding-bottom:8px"><button class="btn btn-g btn-xs" style="color:#dc3545" onclick="rmRole('${type}',${i})">&times;</button></div>`:''}
+        </div>`).join('')}
+      <button class="btn btn-o btn-xs" style="margin-top:4px" onclick="addRole('${type}')">+ 角色</button>
+      <div class="row" style="margin-top:12px"><div class="col" style="max-width:160px"><label>时间</label><input type="time" value="${c[type].time}" data-rtime="${type}"></div></div>
+    </div>`;
+  }
+  document.getElementById('main').innerHTML=h2c('&#9881; 编制与排班设置')+
+    rhtml('grandRaise','&#127937; 大升旗','周一')+
+    rhtml('raise','&#127464;&#127475; 升旗','周二至周五')+
+    rhtml('lower','&#127753; 降旗','周一至周四+周日，需课表空闲')+
+    `<div class="card"><h3>降旗准备时间</h3>
+      <div class="row">
+        <div class="col" style="max-width:160px"><label>准备时间(分钟)</label><input type="number" value="${c.lowerPrep}" min="0" max="120" id="cfg-prep"></div>
+      </div>
+      ${pn.length?`<div style="margin-top:8px;font-size:13px;color:var(--text-secondary)">降旗时段覆盖：${pn.map(p=>p.label+'('+p.time+')').join('、')}</div>`:'<div style="margin-top:8px;font-size:13px;color:var(--primary-light)">提示：当前降旗时间不在课表时间范围内</div>'}
+    </div>
+    <div class="card"><h3>排班规则</h3>
+      <div class="row">
+        <div class="col" style="max-width:160px"><label>每人每周最多值班</label><input type="number" value="${c.maxPerWeek}" min="1" max="14" id="cfg-maxw"></div>
+        <div class="col" style="max-width:160px"><label>最少休息天数</label><input type="number" value="${c.minRest}" min="0" max="7" id="cfg-rest"></div>
+      </div>
+    </div>
+    <div class="card"><h3>&#127988; 旗手/指挥/联勤概览</h3>
+      <table style="font-size:13px"><thead><tr><th>身份</th><th>人数</th><th>队员</th></tr></thead><tbody>
+        ${(()=>{
+          const active=members.filter(m=>m.status==='active');
+          const bearers=active.filter(m=>(m.tags||[]).includes('旗手'));
+          const cmds=active.filter(m=>(m.tags||[]).includes('指挥'));
+          const lias=active.filter(m=>(m.tags||[]).includes('联勤'));
+          return`<tr><td>旗手</td><td><strong>${bearers.length}</strong></td><td style="text-align:left">${bearers.map(m=>esc(m.name)).join('、')||'<span style="color:var(--text-secondary)">无</span>'}</td></tr>
+          <tr><td>指挥</td><td><strong>${cmds.length}</strong></td><td style="text-align:left">${cmds.map(m=>esc(m.name)).join('、')||'<span style="color:var(--text-secondary)">无</span>'}</td></tr>
+          <tr><td>联勤</td><td><strong>${lias.length}</strong></td><td style="text-align:left">${lias.map(m=>esc(m.name)).join('、')||'<span style="color:var(--text-secondary)">无</span>'}</td></tr>`;
+        })()}
+      </tbody></table></div>
+    <button class="btn btn-r" onclick="saveConfig()">&#128190; 保存设置</button>`;
+}
+
+function addRole(type){config[type].roles.push({name:'新角色',count:1});pageConfig()}
+function rmRole(type,i){if(config[type].roles.length<=1)return toast('至少保留一个','toast-err');config[type].roles.splice(i,1);pageConfig()}
+function saveConfig(){
+  document.querySelectorAll('[data-rtype]').forEach(el=>{
+    const t=el.dataset.rtype,i=parseInt(el.dataset.ri),f=el.dataset.rf;
+    if(f==='count')config[t].roles[i].count=parseInt(el.value)||1;
+    else config[t].roles[i].name=el.value.trim()||'未命名';
+  });
+  document.querySelectorAll('[data-rtime]').forEach(el=>{config[el.dataset.rtime].time=el.value});
+  config.lowerPrep=parseInt(document.getElementById('cfg-prep').value)||30;
+  config.maxPerWeek=parseInt(document.getElementById('cfg-maxw').value)||3;
+  config.minRest=parseInt(document.getElementById('cfg-rest').value)||1;
+  S('config',config);toast('设置已保存','toast-ok');pageConfig();
+}
+
+// ═══════════════════════════════════════
+// 排班表
+// ═══════════════════════════════════════
+function renderQuotaUI(){
+  const keys=['24级男','24级女','25级男','25级女'];
+  const short=['24男','24女','25男','25女'];
+  function row(type,label){
+    return '<div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;flex-wrap:wrap">'+
+      '<span style="font-weight:bold;font-size:12px;min-width:50px">'+label+'</span>'+
+      keys.map((k,i)=>'<span style="font-size:11px;display:flex;align-items:center;gap:2px">'+short[i]+'<input type="number" id="q-'+type+'-'+i+'" value="" min="0" max="99" style="width:52px;padding:4px 6px;font-size:11px" placeholder="0"></span>').join('')+
+    '</div>';
+  }
+  return '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">'+
+    '<span style="font-weight:bold;font-size:12px;color:var(--text-secondary)">人员配置要求(留空=不限)</span>'+
+    row('gr','大升旗')+
+    row('ra','升旗')+
+    row('lo','降旗')+
+  '</div>';
+}
+function pageSchedule(){
+  const now=new Date();
+  const mon=new Date(now);mon.setDate(now.getDate()-(now.getDay()+6)%7);
+  document.getElementById('main').innerHTML=h2c('&#128197; 排班表')+`
+    <div class="card">
+      <div class="row" style="align-items:end">
+        <div class="col" style="max-width:180px"><label>选择周一日期</label><input type="date" id="sched-monday" value="${mon.toISOString().slice(0,10)}"></div>
+        <div class="col" style="max-width:100px"><label>周数</label><select id="sched-weeks"><option value="1">1周</option><option value="2">2周</option><option value="4" selected>4周</option></select></div>
+        <div class="col" style="display:flex;align-items:flex-end;gap:8px">
+          <button class="btn btn-r" onclick="doSchedule()">&#129302; 自动排班</button>
+          <button class="btn btn-o" onclick="clearSched()">清空</button>
+          <button class="btn btn-b" onclick="exportExcel()">&#128229; 导出CSV</button>
+          <button class="btn btn-b" onclick="importSchedFromCSV()">&#128228; 导入课表</button>
+          <button class="btn btn-b" onclick="window.print()">&#128424; 打印</button>
+        </div>
+      </div>
+      ${renderQuotaUI()}
+    </div>
+    ${renderLowerBlocked()}
+    <div id="sched-view">${renderSched()}</div>`;
+}
+
+function renderLowerBlocked(){
+  const lp=lowerPeriods();
+  const days=WEEKDAYS.slice(0,5);
+  let html='<div class="card"><h3>&#9888; 每日降旗不可用队员</h3><table style="font-size:13px">';
+  html+='<thead><tr><th>日期</th><th>降旗时段</th><th>不可用队员</th><th>可用人数</th></tr></thead><tbody>';
+  const active=members.filter(m=>m.status==='active');
+  for(let sd=0;sd<5;sd++){
+    const blocked=active.filter(m=>hasClass(m,sd,lp)).map(m=>m.name);
+    const avail=active.length-blocked.length;
+    html+=`<tr><td>${days[sd]}</td><td>${lp.map(n=>PERIODS.find(p=>p.n===n)?.label||'').join('、')}</td>
+      <td style="text-align:left;font-size:12px">${blocked.length?blocked.join('、'):'<span style="color:#999">无</span>'}</td>
+      <td><strong>${avail}</strong>/${active.length}</td></tr>`;
+  }
+  html+='</tbody></table></div>';
+  return html;
+}
+
+function doSchedule(){
+  const start=document.getElementById('sched-monday').value;
+  const weeks=parseInt(document.getElementById('sched-weeks').value);
+  if(!start)return toast('请选择日期','toast-err');
+  if(!members.some(m=>m.status==='active'))return toast('没有在岗队员','toast-err');
+  // Read quotas from UI
+  var q=function(type,i){var v=parseInt(document.getElementById('q-'+type+'-'+i).value);return v||0;};
+  var quotas={};
+  ['gr','ra','lo'].forEach(function(t){
+    quotas[t]={'24级男':q(t,0),'24级女':q(t,1),'25级男':q(t,2),'25级女':q(t,3)};
+  });
+  for(let w=0;w<weeks;w++){
+    // Remove old auto-generated entries for this week first
+    const ws=new Date(start);ws.setDate(ws.getDate()+w*7);
+    const wMonday=ws.toISOString().slice(0,10);
+    for(let d=0;d<7;d++){
+      const dt=new Date(ws);dt.setDate(dt.getDate()+d);
+      const ds=dt.toISOString().slice(0,10);
+      const ei=schedule.findIndex(x=>x.date===ds);
+      if(ei>=0&&!schedule[ei].locked)schedule.splice(ei,1);
+    }
+    const entries=genWeek(wMonday,quotas);
+    for(const e of entries){
+      const ei=schedule.findIndex(x=>x.date===e.date);
+      if(ei>=0&&!schedule[ei].locked)schedule[ei]=e;
+      else if(ei<0)schedule.push(e);
+    }
+    // Update counts incrementally so next week sees current balance
+    recoCounts();
+  }
+  schedule.sort((a,b)=>a.date.localeCompare(b.date));
+  recoCounts();
+  S('schedule',schedule);S('counts',counts);
+  pageSchedule();toast('排班已生成','toast-ok');
+}
+function clearSched(){if(!confirm('确定清空所有排班？'))return;schedule=[];recoCounts();S('schedule',schedule);pageSchedule();toast('已清空','toast-info')}
+
+function renderSched(){
+  if(!schedule.length)return'<div class="card"><div class="empty">暂无排班数据</div></div>';
+  const sorted=[...schedule].sort((a,b)=>a.date.localeCompare(b.date));
+  const weeks=[];let cur=[];
+  for(const s of sorted){cur.push(s);if(cur.length===6||s===sorted[sorted.length-1]){weeks.push(cur);cur=[]}}
+
+  return weeks.map((w,i)=>{
+    const label=`${w[0].date} ~ ${w[w.length-1].date}`;
+    const hasGR=w.some(e=>(e.gr||[]).flat().length>0);
+    const hasRA=w.some(e=>(e.ra||[]).flat().length>0);
+    const hasLO=w.some(e=>(e.lo||[]).flat().length>0);
+
+    const ids=new Set();
+    w.forEach(e=>{[(e.gr||[]),(e.ra||[]),(e.lo||[])].flat(2).forEach(id=>ids.add(id))});
+    const wm=[...ids].map(id=>gm(id)).filter(Boolean).sort((a,b)=>(countsExLia[b.id]||0)-(countsExLia[a.id]||0));
+
+    function rrows(roles,type,cls){
+      return roles.map((r,ri)=>`
+        <tr><td class="rl">${r.name}<br><small style="color:var(--text-secondary);font-weight:normal">${r.count}人</small></td>
+        ${w.map(e=>{
+          const ids_=(e[type]||[])[ri]||[];
+          const names=ids_.map(id=>{let x='';if(type==='lo'){const lp=lowerPeriods();const m_=gm(id);if(m_&&hasClass(m_,e.sd,lp))x=' &#9888;'}return esc(mn(id))+x});
+          return`<td onclick="swapCell('${e.date}','${type}',${ri})" title="点击调整">${names.length?names.map(n=>`<span class="sched-chip ${cls}">${n}</span>`).join(''):'<span class="sched-chip ep">—</span>'}</td>`;
+        }).join('')}</tr>`).join('');
+    }
+
+    return`<div class="card"><h3>&#128197; 第${i+1}周 ${label}</h3>
+      <div style="display:flex;gap:20px">
+        <div style="flex:1;overflow-x:auto">
+          <table class="sched-table"><thead><tr><th style="width:60px">类型</th>
+            ${w.map(e=>`<th class="hd">${e.date.slice(5)}<br>${WEEKDAYS[e.sd]||''}</th>`).join('')}</tr></thead>
+          <tbody>
+            ${hasGR?`<tr><td colspan="${w.length+1}" style="background:#fff5f5;font-weight:bold;text-align:left;padding:8px 10px;font-size:13px">&#127937; 大升旗 (${config.grandRaise.time})</td></tr>${rrows(config.grandRaise.roles,'gr','gr')}`:''}
+            ${hasRA?`<tr><td colspan="${w.length+1}" style="background:#fffaf5;font-weight:bold;text-align:left;padding:8px 10px;font-size:13px">&#127464;&#127475; 升旗 (${config.raise.time})</td></tr>${rrows(config.raise.roles,'ra','ra')}`:''}
+            ${hasLO?`<tr><td colspan="${w.length+1}" style="background:#f0f4ff;font-weight:bold;text-align:left;padding:8px 10px;font-size:13px">&#127753; 降旗 (${config.lower.time})</td></tr>${rrows(config.lower.roles,'lo','lo')}`:''}
+          </tbody></table>
+        </div>
+        <div style="width:160px;flex-shrink:0;border-left:1px solid var(--border);padding-left:16px">
+          <div style="font-size:14px;font-weight:bold;margin-bottom:8px;color:#555">本周出勤</div>
+          ${wm.map(m=>{const n=countsExLia[m.id]||0;const nx=Math.max(...wm.map(x=>countsExLia[x.id]||0),1);const bw=Math.round(n/nx*60);return`<div style="font-size:13px;padding:3px 0;display:flex;align-items:center;justify-content:space-between"><span>${esc(m.name)}</span><span style="color:var(--primary-light);font-weight:bold">${n}<span class="bar" style="width:${bw}px"></span></span></div>`}).join('')}
+          ${!wm.length?'<div style="font-size:13px;color:var(--text-secondary)">暂无</div>':''}
+        </div></div></div>`;
+  }).join('');
+}
+
+function swapCell(dateStr,type,ri){
+  const e=schedule.find(x=>x.date===dateStr);if(!e)return;
+  if(e.locked)return toast('该日已锁定','toast-info');
+  const roles=type==='gr'?config.grandRaise.roles:type==='ra'?config.raise.roles:config.lower.roles;
+  const role=roles[ri];
+  const curIds=(e[type]||[])[ri]||[];
+  const active=members.filter(m=>m.status==='active');
+  const lp=lowerPeriods();
+  const tmap={gr:'大升旗',ra:'升旗',lo:'降旗'};
+  const selTags=[0,0,0];
+
+  let elig=active;
+  if(type==='lo'){elig=active.filter(m=>!hasClass(m,e.sd,lp));if(!elig.length)return toast('无课队员不足','toast-err')}
+
+  const dayIds=new Set();[(e.gr||[]),(e.ra||[]),(e.lo||[])].flat(2).forEach(id=>dayIds.add(id));
+  curIds.forEach(id=>dayIds.delete(id));
+
+  // Build search + tag filter + sort controls
+  const filterBar=`
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+      <input id="swap-search" placeholder="搜索姓名..." style="padding:5px 10px;border:1px solid var(--border);border-radius:4px;font-size:12px;width:140px">
+      <label><input type="checkbox" id="swap-tag-bearer" ${selTags[0]?'checked':''}> 旗手</label>
+      <label><input type="checkbox" id="swap-tag-cmd" ${selTags[1]?'checked':''}> 指挥</label>
+      <label><input type="checkbox" id="swap-tag-lia" ${selTags[2]?'checked':''}> 联勤</label>
+      <span style="font-size:11px;color:var(--text-secondary)">(勾选=只看有该标签的)</span>
+    </div>`;
+
+  const ov=document.createElement('div');ov.className='modal-overlay';
+  ov.innerHTML=`<div class="modal" style="min-width:500px">
+    <h4>调整 ${tmap[type]} — ${role.name} (需${role.count}人) — ${dateStr}</h4>
+    ${filterBar}
+    <div style="max-height:340px;overflow-y:auto" id="swap-list">${elig.map(m=>{
+      const chk=curIds.includes(m.id);const cf=type==='lo'&&hasClass(m,e.sd,lp);const or=dayIds.has(m.id);
+      return`<label class="swap-row" style="display:flex;align-items:center;gap:8px;padding:7px;border-radius:6px;cursor:pointer;${chk?'background:rgba(198,40,40,0.15)':''};${or?'opacity:.45':''}" onmouseover="this.style.background='${chk?'rgba(198,40,40,0.2)':'rgba(255,255,255,0.04)'}'" onmouseout="this.style.background='${chk?'rgba(198,40,40,0.15)':''}'" data-name="${esc(m.name)}" data-tags="${(m.tags||[]).join(',')}">
+        <input type="checkbox" value="${m.id}" ${chk?'checked':''} ${or?'disabled':''} style="width:auto">
+        <span>${esc(m.name)}</span>${(m.tags||[]).length?`<span style="font-size:10px">${m.tags.map(t=>`<span class="badge badge-on" style="margin:1px">${t}</span>`).join('')}</span>`:''}<span style="font-size:11px;color:var(--text-secondary)">${esc(m.cls||'')}·${counts[m.id]||0}次</span>
+        ${cf?'<span style="color:var(--primary-light);font-size:11px">&#9888;有课</span>':''}${or?'<span style="color:var(--text-secondary);font-size:11px">已分配</span>':''}
+      </label>`}).join('')}</div>
+    <div style="margin-top:8px;font-size:11px;color:var(--text-secondary)">已选 <span id="cnt">${curIds.length}</span>/${role.count}</div>
+    <div class="modal-actions">
+      <button class="btn btn-g" onclick="this.closest('.modal-overlay').remove()">取消</button>
+      <button class="btn btn-r" id="swap-save">保存</button>
+    </div></div>`;
+  document.body.appendChild(ov);
+
+  // search & tag filter logic
+  function filterSwapList(){
+    const q=(document.getElementById('swap-search')?.value||'').toLowerCase();
+    const wantBearer=document.getElementById('swap-tag-bearer')?.checked;
+    const wantCmd=document.getElementById('swap-tag-cmd')?.checked;
+    const wantLia=document.getElementById('swap-tag-lia')?.checked;
+    const anyTag=wantBearer||wantCmd||wantLia;
+    document.querySelectorAll('.swap-row').forEach(row=>{
+      const name=row.dataset.name.toLowerCase();
+      const tags=row.dataset.tags||'';
+      const nameOk=!q||name.includes(q);
+      let tagOk=true;
+      if(anyTag){
+        tagOk=false;
+        if(wantBearer&&tags.includes('旗手'))tagOk=true;
+        if(wantCmd&&tags.includes('指挥'))tagOk=true;
+        if(wantLia&&tags.includes('联勤'))tagOk=true;
+      }
+      row.style.display=nameOk&&tagOk?'':'none';
+    });
+  }
+
+  const ss=document.getElementById('swap-search');
+  if(ss)ss.addEventListener('input',filterSwapList);
+  ['swap-tag-bearer','swap-tag-cmd','swap-tag-lia'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.addEventListener('change',filterSwapList);
+  });
+
+  ov.querySelectorAll('input[type=checkbox]').forEach(cb=>{if(!cb.parentElement.classList.contains('swap-row'))return;cb.addEventListener('change',()=>{
+    const chk=ov.querySelectorAll('input[type=checkbox]:checked');
+    ov.querySelector('#cnt').textContent=chk.length;
+    if(chk.length>role.count){cb.checked=false;toast('最多'+role.count+'人','toast-err');ov.querySelector('#cnt').textContent=ov.querySelectorAll('input[type=checkbox]:checked').length}
+  })});
+  ov.querySelector('#swap-save').onclick=()=>{
+    const sel=[...ov.querySelectorAll('input[type=checkbox]:checked')].map(cb=>cb.value);
+    if(sel.length<role.count)return toast('需选'+role.count+'人','toast-err');
+    if(!e[type])e[type]=[];e[type][ri]=sel;
+    recoCounts();S('schedule',schedule);ov.remove();pageSchedule();toast('已调整','toast-ok');
+  };
+  ov.addEventListener('click',ev=>{if(ev.target===ov)ov.remove()});
+}
+
+// ═══════════════════════════════════════
+// 值班统计
+// ═══════════════════════════════════════
+function pageStats(){
+  const sorted=[...members].sort((a,b)=>(countsExLia[b.id]||0)-(countsExLia[a.id]||0));
+  const totalExLia=Object.values(countsExLia).reduce((s,v)=>s+v,0);
+  const mx=Math.max(...Object.values(countsExLia),1);
+  const recent=[...schedule].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,20);
+  const tmap={gr:'大升旗',ra:'升旗',lo:'降旗'};
+  const selTags=[0,0,0];
+  document.getElementById('main').innerHTML=h2c('&#128202; 值班统计')+`
+    <div class="card"><h3>全队累计 <span style="font-weight:normal;font-size:14px;color:var(--text-secondary)">${totalExLia}人次（不含跟旗）</span></h3>
+      ${sorted.length?`<table><thead><tr><th>排名</th><th>姓名</th><th>班级</th><th>升降旗</th><th>跟旗</th><th>占比</th><th>状态</th></tr></thead><tbody>
+        ${sorted.map((m,i)=>`
+          <tr><td>${i+1}</td><td><strong>${esc(m.name)}</strong></td><td>${esc(m.cls||'')}</td>
+          <td><strong>${countsExLia[m.id]||0}</strong></td>
+          <td>${countsLia(m.id)}</td>
+          <td><span class="bar" style="width:${Math.round((countsExLia[m.id]||0)/mx*70)}px;height:6px"></span> ${totalExLia?Math.round((countsExLia[m.id]||0)/totalExLia*100):0}%</td>
+          <td><span class="badge ${m.status==='active'?'badge-on':'badge-off'}">${m.status==='active'?'在岗':'请假'}</span></td></tr>`).join('')}
+      </tbody></table>`:'<div class="empty">暂无数据</div>'}
+    </div>
+    <div class="card"><h3>最近记录</h3>
+      ${recent.length?`<table><thead><tr><th>日期</th><th>大升旗</th><th>升旗</th><th>降旗</th></tr></thead><tbody>
+        ${recent.map(e=>`<tr><td>${e.date}<br><small>${WEEKDAYS[e.sd]||''}</small></td>
+          <td style="text-align:left;font-size:13px">${(e.gr||[]).flatMap(ids=>ids.map(id=>mn(id))).filter(Boolean).join('、')||'—'}</td>
+          <td style="text-align:left;font-size:13px">${(e.ra||[]).flatMap(ids=>ids.map(id=>mn(id))).filter(Boolean).join('、')||'—'}</td>
+          <td style="text-align:left;font-size:13px">${(e.lo||[]).flatMap(ids=>ids.map(id=>mn(id))).filter(Boolean).join('、')||'—'}</td></tr>`).join('')}
+      </tbody></table>`:'<div class="empty">暂无数据</div>'}
+    </div>`;
+}
+
+function exportExcel(){
+  if(!schedule.length)return toast('暂无排班数据','toast-err');
+  const sorted=[...schedule].sort((a,b)=>a.date.localeCompare(b.date));
+
+  const CONFIG={gr:config.grandRaise,ra:config.raise,lo:config.lower};
+  const DAYS=['周一','周二','周三','周四','周五','周日'];
+
+  // CSV escape
+  function csv(s){if(s==null||s==='')return '';if(s.includes(',')||s.includes('"')||s.includes('\n'))return '"'+s.replace(/"/g,'""')+'"';return s;}
+
+  const weeks=[];let cw=[];
+  for(const s of sorted){cw.push(s);if(cw.length===6||s===sorted[sorted.length-1]){weeks.push(cw);cw=[]}}
+
+  // Build 2D grid: rows array of 23-element arrays (cols A-W = 0..22)
+  const rows=[];
+
+  weeks.forEach((w,wi)=>{
+    if(wi>0)rows.push(new Array(23).fill('')); // spacer
+
+    // Week header row: A = week label
+    const wl=`第${wi+1}周 ${w[0].date} ~ ${w[w.length-1].date}`;
+    const whRow=new Array(23).fill('');
+    whRow[0]=wl; rows.push(whRow);
+
+    // Day header row
+    const dhRow=new Array(23).fill('');
+    DAYS.forEach((d,i)=>{dhRow[i<=4?i+1:7]=d;});
+    dhRow[20]='姓名'; dhRow[21]='次数';
+    rows.push(dhRow);
+    const dayHdrIdx=rows.length-1;
+
+    // Section blocks
+    ['gr','ra','lo'].forEach(type=>{
+      const roles=CONFIG[type].roles;
+      const any=w.some(e=>{const a=e[type]||[];return a.some(x=>(x||[]).length>0);});
+      if(!any)return;
+
+      // Section title row
+      const tl=(type==='gr'?'大升旗':type==='ra'?'升旗':'降旗')+' ('+CONFIG[type].time+')';
+      const secRow=new Array(23).fill('');
+      secRow[0]=tl; secRow[1]=tl; secRow[2]=tl; secRow[3]=tl; secRow[4]=tl; secRow[5]=tl; secRow[7]=tl;
+      rows.push(secRow);
+
+      // Role rows
+      roles.forEach((role,ri)=>{
+        const roleRow=new Array(23).fill('');
+        roleRow[0]=role.name+'('+role.count+'人)';
+        for(let sd=0;sd<=5;sd++){
+          const e=w.find(x=>x.sd===sd);
+          const ids=e&&(e[type]||[])[ri]||[];
+          const names=ids.map(id=>mn(id)).join('、')||'—';
+          roleRow[sd<=4?sd+1:7]=names;
+        }
+        rows.push(roleRow);
+      });
+    });
+
+    // Sidebar member list (spans from day header row downward)
+    const allIds=new Set();
+    w.forEach(e=>{['gr','ra','lo'].forEach(t=>{(e[t]||[]).forEach(a=>{(a||[]).forEach(id=>{if(id)allIds.add(id);})})})});
+    const wm=[...allIds].map(id=>gm(id)).filter(Boolean).sort((a,b)=>(countsExLia[b.id]||0)-(countsExLia[a.id]||0));
+    wm.forEach((m,mi)=>{
+      const rowIdx=dayHdrIdx+1+mi;
+      while(rows.length<=rowIdx)rows.push(new Array(23).fill(''));
+      rows[rowIdx][20]=m.name;
+      // recount from grid
+      let cnt=0;
+      for(let r=0;r<rows.length;r++){
+        for(let c=0;c<=11;c++){
+          const v=rows[r][c];
+          if(v&&v.includes(m.name))cnt++;
+        }
+      }
+      rows[rowIdx][21]=String(cnt);
+    });
+  });
+
+  // Serialize to CSV
+  let csvText='﻿'; // BOM for Excel UTF-8
+  for(const row of rows){
+    csvText+=row.map(csv).join(',')+'\n';
+  }
+
+  const blob=new Blob([csvText],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.style.display='none';
+  a.download='排班表_'+(new Date(sorted[0].date)).toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),200);
+  toast('已导出CSV','toast-ok');
+}
+document.querySelectorAll('nav a').forEach(a=>{
+  a.addEventListener('click',()=>{
+    document.querySelectorAll('nav a').forEach(x=>x.classList.remove('sel'));a.classList.add('sel');
+    const p=a.dataset.page;
+    if(p==='members')pageMembers();else if(p==='config')pageConfig();else if(p==='schedule')pageSchedule();else if(p==='stats')pageStats();
+  });
+});
+
+// ── 初始化 ──
+pageMembers();
+
+// ── PWA Service Worker ──
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
+</script>
+</body>
+</html
 function h2c(title,extra){return`<h2>${title}${extra||''}</h2>`}
 
 function dlgMember(id){

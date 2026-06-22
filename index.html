@@ -711,7 +711,8 @@ function pageMembers(){
   const filtered=memberCohort==='全部'?members:members.filter(m=>(m.cohort||'')===memberCohort);
   document.getElementById('main').innerHTML=h2c('&#128101; 队员管理', '<button class="btn btn-o btn-xs" onclick="importSchedFromCSV()" style="margin-left:16px">&#128228; 批量导入课表</button>','<button class="btn btn-r btn-xs" onclick="dlgMember()">+ 添加队员</button>')+`
     <div class="card">
-      <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px">
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+        <button class="btn btn-r" onclick="dlgMember()" style="padding:8px 20px;font-size:14px">+ 添加队员</button>
         <label style="font-size:13px;font-weight:bold">届级：</label>
         <select id="cohort-filter" onchange="memberCohort=this.value;pageMembers()" style="width:auto;padding:8px 14px">
           <option value="全部" ${memberCohort==='全部'?'selected':''}>全部 (${members.length}人)</option>
